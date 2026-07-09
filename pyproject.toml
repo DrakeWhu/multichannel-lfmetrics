@@ -12,6 +12,7 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "numpy",
+    "h5py",
 ]
 
 [tool.setuptools.packages.find]
