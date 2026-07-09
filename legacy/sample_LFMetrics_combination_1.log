@@ -1,0 +1,198 @@
+python3: can't open file '/home/jrope/Python/parameter_scan/commands/extract_LFMetrics.py': [Errno 2] No such file or directory
+Actualizando estado a failed
+Error: stepping, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: stepping, database is locked (5)
+Error: stepping, database is locked (5)
+Error: stepping, database is locked (5)
+Error: stepping, database is locked (5)
+Error: stepping, database is locked (5)
+Error: stepping, database is locked (5)
+Error: stepping, database is locked (5)
+Error: stepping, database is locked (5)
+Error: stepping, database is locked (5)
+Logger initialized
+Extensiones en /home/jrope/workspaces/cursor_workspace/simulations/bayesian_optimization/filled_multichannel_LWFA/combination_1/3D: ['h5', 'pmd', 'h5']
+Tipo de simulación: h5
+2025-02-11 13:29:02,422 - parameter_scan - INFO - Shape of ex_data: (256, 128, 128)
+2025-02-11 13:29:02,422 - parameter_scan - INFO - Shape of ey_data: (256, 128, 128)
+2025-02-11 13:29:02,423 - parameter_scan - INFO - Shape of ez_data: (256, 128, 128)
+2025-02-11 13:29:02,423 - parameter_scan - INFO - Shape of bx_data: (256, 128, 128)
+2025-02-11 13:29:02,423 - parameter_scan - INFO - Shape of by_data: (256, 128, 128)
+2025-02-11 13:29:02,423 - parameter_scan - INFO - Shape of bz_data: (256, 128, 128)
+2025-02-11 13:29:02,423 - parameter_scan - INFO - Cargando datos desde /home/jrope/workspaces/cursor_workspace/simulations/bayesian_optimization/filled_multichannel_LWFA/combination_1/3D/openpmd_005000.h5
+2025-02-11 13:29:02,429 - parameter_scan - INFO - Ex minimum: -392709408.0, Ex maximum: 511314560.0, Mean: -36422.109375
+2025-02-11 13:29:02,434 - parameter_scan - INFO - Ey minimum: -475687968.0, Ey maximum: 483595520.0, Mean: 154171.15625
+2025-02-11 13:29:02,439 - parameter_scan - INFO - Ez minimum: -225064368.0, Ez maximum: 234458976.0, Mean: -1748295.0
+2025-02-11 13:29:02,445 - parameter_scan - INFO - Bx minimum: -1.790266513824463, Bx maximum: 1.7392051219940186, Mean: -0.0013933487934991717
+2025-02-11 13:29:02,450 - parameter_scan - INFO - By minimum: -1.416358470916748, By maximum: 1.8314344882965088, Mean: 6.95630515110679e-05
+2025-02-11 13:29:02,455 - parameter_scan - INFO - Bz minimum: -0.1593310832977295, Bz maximum: 0.1573476493358612, Mean: 3.833119626506232e-05
+2025-02-11 13:29:02,471 - parameter_scan - INFO - Extrayendo métricas para la simulación 1
+2025-02-11 13:29:02,471 - parameter_scan - INFO - Slice 2D extraído en el índice y = 64
+2025-02-11 13:29:02,471 - parameter_scan - INFO - Shape of ex_data_slice: (256, 128)
+2025-02-11 13:29:02,471 - parameter_scan - INFO - Shape of ey_data_slice: (256, 128)
+2025-02-11 13:29:02,471 - parameter_scan - INFO - Shape of bz_data_slice: (256, 128)
+2025-02-11 13:29:02,662 - parameter_scan - INFO - Métricas del wakefield longitudinal en el último frame: {'amplitude': np.float64(123590514.8523908), 'wavelength': np.float64(142.30075390787323), 'inverse_error': np.float64(1.7521586933162308e-17)}
+2025-02-11 13:29:02,662 - parameter_scan - INFO - Métricas del wakefield transversal en el último frame: {'amplitude': np.float64(43302980.88462569), 'wavelength': np.float64(8.645951225606261), 'inverse_error': np.float64(8.467226662608361e-18)}
+x_rms^2: 2.675860574785638e-11, px_rms^2: 4.203895392974451e-45, xpx_cov: 3.344412978132406e-28
+emittance_x^2: 0.0
+2025-02-11 13:29:02,662 - parameter_scan - WARNING - Emittance x squared is too small: 0.0
+2025-02-11 13:29:02,662 - parameter_scan - WARNING - Emittance x squared is too small: 0.0
+2025-02-11 13:29:02,662 - parameter_scan - WARNING - Setting emittance x to 1e-25
+2025-02-11 13:29:02,662 - parameter_scan - WARNING - Setting emittance x to 1e-25
+2025-02-11 13:29:02,663 - parameter_scan - INFO - Insertando métrica longitudinal_amplitude para la simulación 1 con valor 123590514.8523908
+2025-02-11 13:29:02,663 - parameter_scan - INFO - Inserting result longitudinal_amplitude for simulation 1 with value 123590514.8523908
+2025-02-11 13:29:04,478 - parameter_scan - INFO - Result longitudinal_amplitude inserted for simulation 1 with value 123590514.8523908
+2025-02-11 13:29:04,478 - parameter_scan - INFO - Insertando métrica longitudinal_wavelength para la simulación 1 con valor 142.30075390787323
+2025-02-11 13:29:04,478 - parameter_scan - INFO - Inserting result longitudinal_wavelength for simulation 1 with value 142.30075390787323
+2025-02-11 13:29:05,324 - parameter_scan - INFO - Result longitudinal_wavelength inserted for simulation 1 with value 142.30075390787323
+2025-02-11 13:29:05,324 - parameter_scan - INFO - Insertando métrica longitudinal_inverse_error para la simulación 1 con valor 1.7521586933162308e-17
+2025-02-11 13:29:05,324 - parameter_scan - INFO - Inserting result longitudinal_inverse_error for simulation 1 with value 1.7521586933162308e-17
+2025-02-11 13:29:05,649 - parameter_scan - INFO - Result longitudinal_inverse_error inserted for simulation 1 with value 1.7521586933162308e-17
+2025-02-11 13:29:05,649 - parameter_scan - INFO - Insertando métrica transverse_amplitude para la simulación 1 con valor 43302980.88462569
+2025-02-11 13:29:05,649 - parameter_scan - INFO - Inserting result transverse_amplitude for simulation 1 with value 43302980.88462569
+2025-02-11 13:29:05,718 - parameter_scan - INFO - Result transverse_amplitude inserted for simulation 1 with value 43302980.88462569
+2025-02-11 13:29:05,719 - parameter_scan - INFO - Insertando métrica transverse_wavelength para la simulación 1 con valor 8.645951225606261
+2025-02-11 13:29:05,719 - parameter_scan - INFO - Inserting result transverse_wavelength for simulation 1 with value 8.645951225606261
+2025-02-11 13:29:10,811 - parameter_scan - WARNING - Database is locked, retrying in 5 seconds...
+2025-02-11 13:29:10,811 - parameter_scan - WARNING - Database is locked, retrying in 5 seconds...
+2025-02-11 13:29:15,811 - parameter_scan - INFO - Inserting result transverse_wavelength for simulation 1 with value 8.645951225606261
+2025-02-11 13:29:15,957 - parameter_scan - INFO - Result transverse_wavelength inserted for simulation 1 with value 8.645951225606261
+2025-02-11 13:29:15,957 - parameter_scan - INFO - Insertando métrica transverse_inverse_error para la simulación 1 con valor 8.467226662608361e-18
+2025-02-11 13:29:15,957 - parameter_scan - INFO - Inserting result transverse_inverse_error for simulation 1 with value 8.467226662608361e-18
+2025-02-11 13:29:16,772 - parameter_scan - INFO - Result transverse_inverse_error inserted for simulation 1 with value 8.467226662608361e-18
+2025-02-11 13:29:16,772 - parameter_scan - INFO - Insertando métrica emittance_x para la simulación 1 con valor 2.007403978495219e-18
+2025-02-11 13:29:16,772 - parameter_scan - INFO - Inserting result emittance_x for simulation 1 with value 2.007403978495219e-18
+2025-02-11 13:29:16,957 - parameter_scan - INFO - Result emittance_x inserted for simulation 1 with value 2.007403978495219e-18
+2025-02-11 13:29:16,957 - parameter_scan - INFO - Insertando métrica beta_x para la simulación 1 con valor 13329956.0
+2025-02-11 13:29:16,957 - parameter_scan - INFO - Inserting result beta_x for simulation 1 with value 13329956.0
+2025-02-11 13:29:17,983 - parameter_scan - INFO - Result beta_x inserted for simulation 1 with value 13329956.0
+2025-02-11 13:29:17,983 - parameter_scan - INFO - Insertando métrica gamma_x para la simulación 1 con valor 2.0941949769544488e-27
+2025-02-11 13:29:17,983 - parameter_scan - INFO - Inserting result gamma_x for simulation 1 with value 2.0941949769544488e-27
+2025-02-11 13:29:18,189 - parameter_scan - INFO - Result gamma_x inserted for simulation 1 with value 2.0941949769544488e-27
+2025-02-11 13:29:18,189 - parameter_scan - INFO - Insertando métrica alpha_x para la simulación 1 con valor -1.6660388346689814e-10
+2025-02-11 13:29:18,190 - parameter_scan - INFO - Inserting result alpha_x for simulation 1 with value -1.6660388346689814e-10
+2025-02-11 13:29:18,247 - parameter_scan - INFO - Result alpha_x inserted for simulation 1 with value -1.6660388346689814e-10
+2025-02-11 13:29:18,247 - parameter_scan - INFO - Insertando métrica mean_energy para la simulación 1 con valor 10.213324213352447
+2025-02-11 13:29:18,248 - parameter_scan - INFO - Inserting result mean_energy for simulation 1 with value 10.213324213352447
+2025-02-11 13:29:18,431 - parameter_scan - INFO - Result mean_energy inserted for simulation 1 with value 10.213324213352447
+2025-02-11 13:29:18,431 - parameter_scan - INFO - Insertando métrica std_energy para la simulación 1 con valor 1.0186032162165917
+2025-02-11 13:29:18,431 - parameter_scan - INFO - Inserting result std_energy for simulation 1 with value 1.0186032162165917
+2025-02-11 13:29:20,665 - parameter_scan - INFO - Result std_energy inserted for simulation 1 with value 1.0186032162165917
+Actualizando estado a analyzed
+Error: in prepare, database is locked (5)
+Error: stepping, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: stepping, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: stepping, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: stepping, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: stepping, database is locked (5)
+No se pudo actualizar la base de datos después de múltiples intentos
+Logger initialized
+Extensiones en /home/jrope/workspaces/cursor_workspace/simulations/bayesian_optimization/filled_multichannel_LWFA/combination_1/3D: ['h5', 'pmd', 'h5']
+Tipo de simulación: h5
+2025-02-17 14:18:14,457 - parameter_scan - INFO - Shape of ex_data: (256, 128, 128)
+2025-02-17 14:18:14,458 - parameter_scan - INFO - Shape of ey_data: (256, 128, 128)
+2025-02-17 14:18:14,458 - parameter_scan - INFO - Shape of ez_data: (256, 128, 128)
+2025-02-17 14:18:14,458 - parameter_scan - INFO - Shape of bx_data: (256, 128, 128)
+2025-02-17 14:18:14,458 - parameter_scan - INFO - Shape of by_data: (256, 128, 128)
+2025-02-17 14:18:14,458 - parameter_scan - INFO - Shape of bz_data: (256, 128, 128)
+2025-02-17 14:18:14,458 - parameter_scan - INFO - Cargando datos desde /home/jrope/workspaces/cursor_workspace/simulations/bayesian_optimization/filled_multichannel_LWFA/combination_1/3D/openpmd_005000.h5
+2025-02-17 14:18:14,464 - parameter_scan - INFO - Ex minimum: -392709408.0, Ex maximum: 511314560.0, Mean: -36422.109375
+2025-02-17 14:18:14,468 - parameter_scan - INFO - Ey minimum: -475687968.0, Ey maximum: 483595520.0, Mean: 154171.15625
+2025-02-17 14:18:14,475 - parameter_scan - INFO - Ez minimum: -225064368.0, Ez maximum: 234458976.0, Mean: -1748295.0
+2025-02-17 14:18:14,480 - parameter_scan - INFO - Bx minimum: -1.790266513824463, Bx maximum: 1.7392051219940186, Mean: -0.0013933487934991717
+2025-02-17 14:18:14,485 - parameter_scan - INFO - By minimum: -1.416358470916748, By maximum: 1.8314344882965088, Mean: 6.95630515110679e-05
+2025-02-17 14:18:14,490 - parameter_scan - INFO - Bz minimum: -0.1593310832977295, Bz maximum: 0.1573476493358612, Mean: 3.833119626506232e-05
+2025-02-17 14:18:14,506 - parameter_scan - INFO - Extrayendo métricas para la simulación 1
+2025-02-17 14:18:14,506 - parameter_scan - INFO - Slice 2D extraído en el índice y = 64
+2025-02-17 14:18:14,507 - parameter_scan - INFO - Shape of ex_data_slice: (256, 128)
+2025-02-17 14:18:14,507 - parameter_scan - INFO - Shape of ey_data_slice: (256, 128)
+2025-02-17 14:18:14,507 - parameter_scan - INFO - Shape of bz_data_slice: (256, 128)
+2025-02-17 14:18:14,771 - parameter_scan - INFO - Métricas del wakefield longitudinal en el último frame: {'amplitude': np.float64(123590514.8523908), 'wavelength': np.float64(142.30075390787323), 'inverse_error': np.float64(1.7521586933162308e-17)}
+2025-02-17 14:18:14,778 - parameter_scan - INFO - Métricas del wakefield transversal en el último frame: {'amplitude': np.float64(43302980.88462569), 'wavelength': np.float64(8.645951225606261), 'inverse_error': np.float64(8.467226662608361e-18)}
+x_rms^2: 2.675860574785638e-11, px_rms^2: 4.203895392974451e-45, xpx_cov: 3.344412978132406e-28
+emittance_x^2: 0.0
+2025-02-17 14:18:14,779 - parameter_scan - WARNING - Emittance x squared is too small: 0.0
+2025-02-17 14:18:14,779 - parameter_scan - WARNING - Emittance x squared is too small: 0.0
+2025-02-17 14:18:14,779 - parameter_scan - WARNING - Setting emittance x to 1e-25
+2025-02-17 14:18:14,779 - parameter_scan - WARNING - Setting emittance x to 1e-25
+2025-02-17 14:18:14,780 - parameter_scan - INFO - Insertando métrica longitudinal_amplitude para la simulación 1 con valor 123590514.8523908
+2025-02-17 14:18:14,780 - parameter_scan - INFO - Inserting result longitudinal_amplitude for simulation 1 with value 123590514.8523908
+2025-02-17 14:18:14,889 - parameter_scan - INFO - Result longitudinal_amplitude inserted for simulation 1 with value 123590514.8523908
+2025-02-17 14:18:14,889 - parameter_scan - INFO - Insertando métrica longitudinal_wavelength para la simulación 1 con valor 142.30075390787323
+2025-02-17 14:18:14,889 - parameter_scan - INFO - Inserting result longitudinal_wavelength for simulation 1 with value 142.30075390787323
+2025-02-17 14:18:14,947 - parameter_scan - INFO - Result longitudinal_wavelength inserted for simulation 1 with value 142.30075390787323
+2025-02-17 14:18:14,947 - parameter_scan - INFO - Insertando métrica transverse_amplitude para la simulación 1 con valor 43302980.88462569
+2025-02-17 14:18:14,947 - parameter_scan - INFO - Inserting result transverse_amplitude for simulation 1 with value 43302980.88462569
+2025-02-17 14:18:15,609 - parameter_scan - INFO - Result transverse_amplitude inserted for simulation 1 with value 43302980.88462569
+2025-02-17 14:18:15,610 - parameter_scan - INFO - Insertando métrica transverse_wavelength para la simulación 1 con valor 8.645951225606261
+2025-02-17 14:18:15,610 - parameter_scan - INFO - Inserting result transverse_wavelength for simulation 1 with value 8.645951225606261
+2025-02-17 14:18:15,670 - parameter_scan - INFO - Result transverse_wavelength inserted for simulation 1 with value 8.645951225606261
+2025-02-17 14:18:15,670 - parameter_scan - INFO - Insertando métrica mean_energy para la simulación 1 con valor 10.213324213352447
+2025-02-17 14:18:15,670 - parameter_scan - INFO - Inserting result mean_energy for simulation 1 with value 10.213324213352447
+2025-02-17 14:18:15,730 - parameter_scan - INFO - Result mean_energy inserted for simulation 1 with value 10.213324213352447
+Actualizando estado a analyzed
+Logger initialized
+Extensiones en /home/jrope/workspaces/cursor_workspace/simulations/bayesian_optimization/filled_multichannel_LWFA/combination_1/3D: ['h5', 'pmd', 'h5']
+Tipo de simulación: h5
+2025-02-17 14:19:11,715 - parameter_scan - INFO - Shape of ex_data: (256, 128, 128)
+2025-02-17 14:19:11,716 - parameter_scan - INFO - Shape of ey_data: (256, 128, 128)
+2025-02-17 14:19:11,716 - parameter_scan - INFO - Shape of ez_data: (256, 128, 128)
+2025-02-17 14:19:11,716 - parameter_scan - INFO - Shape of bx_data: (256, 128, 128)
+2025-02-17 14:19:11,716 - parameter_scan - INFO - Shape of by_data: (256, 128, 128)
+2025-02-17 14:19:11,716 - parameter_scan - INFO - Shape of bz_data: (256, 128, 128)
+2025-02-17 14:19:11,716 - parameter_scan - INFO - Cargando datos desde /home/jrope/workspaces/cursor_workspace/simulations/bayesian_optimization/filled_multichannel_LWFA/combination_1/3D/openpmd_005000.h5
+2025-02-17 14:19:11,720 - parameter_scan - INFO - Ex minimum: -392709408.0, Ex maximum: 511314560.0, Mean: -36422.109375
+2025-02-17 14:19:11,724 - parameter_scan - INFO - Ey minimum: -475687968.0, Ey maximum: 483595520.0, Mean: 154171.15625
+2025-02-17 14:19:11,728 - parameter_scan - INFO - Ez minimum: -225064368.0, Ez maximum: 234458976.0, Mean: -1748295.0
+2025-02-17 14:19:11,732 - parameter_scan - INFO - Bx minimum: -1.790266513824463, Bx maximum: 1.7392051219940186, Mean: -0.0013933487934991717
+2025-02-17 14:19:11,735 - parameter_scan - INFO - By minimum: -1.416358470916748, By maximum: 1.8314344882965088, Mean: 6.95630515110679e-05
+2025-02-17 14:19:11,739 - parameter_scan - INFO - Bz minimum: -0.1593310832977295, Bz maximum: 0.1573476493358612, Mean: 3.833119626506232e-05
+2025-02-17 14:19:11,752 - parameter_scan - INFO - Extrayendo métricas para la simulación 1
+2025-02-17 14:19:11,752 - parameter_scan - INFO - Slice 2D extraído en el índice y = 64
+2025-02-17 14:19:11,752 - parameter_scan - INFO - Shape of ex_data_slice: (256, 128)
+2025-02-17 14:19:11,752 - parameter_scan - INFO - Shape of ey_data_slice: (256, 128)
+2025-02-17 14:19:11,753 - parameter_scan - INFO - Shape of bz_data_slice: (256, 128)
+2025-02-17 14:19:11,937 - parameter_scan - INFO - Métricas del wakefield longitudinal en el último frame: {'amplitude': np.float64(123590514.8523908), 'wavelength': np.float64(142.30075390787323), 'inverse_error': np.float64(1.7521586933162308e-17)}
+2025-02-17 14:19:11,938 - parameter_scan - INFO - Métricas del wakefield transversal en el último frame: {'amplitude': np.float64(43302980.88462569), 'wavelength': np.float64(8.645951225606261), 'inverse_error': np.float64(8.467226662608361e-18)}
+x_rms^2: 2.675860574785638e-11, px_rms^2: 4.203895392974451e-45, xpx_cov: 3.344412978132406e-28
+emittance_x^2: 0.0
+2025-02-17 14:19:11,938 - parameter_scan - WARNING - Emittance x squared is too small: 0.0
+2025-02-17 14:19:11,938 - parameter_scan - WARNING - Emittance x squared is too small: 0.0
+2025-02-17 14:19:11,938 - parameter_scan - WARNING - Setting emittance x to 1e-25
+2025-02-17 14:19:11,938 - parameter_scan - WARNING - Setting emittance x to 1e-25
+2025-02-17 14:19:11,939 - parameter_scan - INFO - Insertando métrica longitudinal_amplitude para la simulación 1 con valor 123590514.8523908
+2025-02-17 14:19:11,939 - parameter_scan - INFO - Inserting result longitudinal_amplitude for simulation 1 with value 123590514.8523908
+2025-02-17 14:19:12,687 - parameter_scan - INFO - Result longitudinal_amplitude inserted for simulation 1 with value 123590514.8523908
+2025-02-17 14:19:12,688 - parameter_scan - INFO - Insertando métrica longitudinal_wavelength para la simulación 1 con valor 142.30075390787323
+2025-02-17 14:19:12,688 - parameter_scan - INFO - Inserting result longitudinal_wavelength for simulation 1 with value 142.30075390787323
+2025-02-17 14:19:14,082 - parameter_scan - INFO - Result longitudinal_wavelength inserted for simulation 1 with value 142.30075390787323
+2025-02-17 14:19:14,082 - parameter_scan - INFO - Insertando métrica transverse_amplitude para la simulación 1 con valor 43302980.88462569
+2025-02-17 14:19:14,082 - parameter_scan - INFO - Inserting result transverse_amplitude for simulation 1 with value 43302980.88462569
+2025-02-17 14:19:17,114 - parameter_scan - INFO - Result transverse_amplitude inserted for simulation 1 with value 43302980.88462569
+2025-02-17 14:19:17,114 - parameter_scan - INFO - Insertando métrica transverse_wavelength para la simulación 1 con valor 8.645951225606261
+2025-02-17 14:19:17,114 - parameter_scan - INFO - Inserting result transverse_wavelength for simulation 1 with value 8.645951225606261
+2025-02-17 14:19:19,852 - parameter_scan - INFO - Result transverse_wavelength inserted for simulation 1 with value 8.645951225606261
+2025-02-17 14:19:19,872 - parameter_scan - INFO - Insertando métrica mean_energy para la simulación 1 con valor 10.213324213352447
+2025-02-17 14:19:19,872 - parameter_scan - INFO - Inserting result mean_energy for simulation 1 with value 10.213324213352447
+2025-02-17 14:19:22,893 - parameter_scan - INFO - Result mean_energy inserted for simulation 1 with value 10.213324213352447
+Actualizando estado a analyzed
+Error: stepping, database is locked (5)
+Error: in prepare, database is locked (5)
+Error: in prepare, database is locked (5)
