@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Local/editor
+.vscode/
+.idea/
+.DS_Store
+
+# Data / simulation outputs
+*.h5
+*.hdf5
+*.bp
+*.bp4
+*.bp5
+*.sdf
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and generated outputs
+*.out
+*.err
+post/
+particle_summary.csv
+particle_timeseries.csv
+
+# Keep explicitly copied small legacy sample logs if already tracked intentionally.
