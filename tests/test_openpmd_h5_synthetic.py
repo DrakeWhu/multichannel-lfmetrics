@@ -53,8 +53,8 @@ class OpenPMDH5SyntheticTests(unittest.TestCase):
         self.assertEqual(parse_openpmd_step("3D/openpmd_000100.h5"), 100)
         self.assertIsNone(parse_openpmd_step("data.h5"))
 
-    def test_choose_species_prefers_beam(self):
-        self.assertEqual(choose_species(["electrons", "beam"]), "beam")
+    def test_choose_species_prefers_electrons(self):
+        self.assertEqual(choose_species(["electrons", "beam"]), "electrons")
 
     def test_choose_species_respects_explicit_species(self):
         self.assertEqual(
@@ -69,16 +69,16 @@ class OpenPMDH5SyntheticTests(unittest.TestCase):
 
             self.assertEqual(list_species_in_h5(path), ["beam", "electrons"])
 
-    def test_read_particles_from_h5_uses_species_priority_and_position_offset(self):
+    def test_read_particles_from_h5_uses_electron_priority_and_position_offset(self):
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "openpmd_005000.h5"
             write_synthetic_openpmd_file(path)
 
             particles = read_particles_from_h5(path)
 
-            self.assertEqual(particles.species, "beam")
+            self.assertEqual(particles.species, "electrons")
             self.assertEqual(particles.step, 5000)
-            np.testing.assert_allclose(particles.z_m, np.array([25.0, 26.0]))
+            np.testing.assert_allclose(particles.z_m, np.array([15.0, 16.0]))
             np.testing.assert_allclose(particles.weighting, np.array([10.0, 20.0]))
 
     def test_read_particles_from_h5_can_select_electrons(self):

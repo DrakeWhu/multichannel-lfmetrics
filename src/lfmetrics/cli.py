@@ -56,7 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help=(
             "Comma-separated species to analyze. "
-            "If omitted, LFMetrics chooses beam, then electrons, then ionized_electrons."
+            "If omitted, LFMetrics analyzes electrons."
         ),
     )
     analyze_case.add_argument(
@@ -80,7 +80,7 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_file.add_argument(
         "--species",
         default=None,
-        help="Comma-separated species to analyze.",
+        help="Comma-separated species to analyze. Current default: electrons.",
     )
     analyze_file.add_argument(
         "--energy-threshold-MeV",

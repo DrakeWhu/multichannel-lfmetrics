@@ -10,7 +10,7 @@ import numpy as np
 from .particles import ParticleData
 
 
-DEFAULT_SPECIES_PRIORITY = ("beam", "electrons", "ionized_electrons")
+DEFAULT_SPECIES_PRIORITY = "electrons"
 
 
 def list_openpmd_h5_files(

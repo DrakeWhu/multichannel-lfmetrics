@@ -106,6 +106,32 @@ class CLITests(unittest.TestCase):
 
             self.assertEqual(rc, 2)
 
+    def test_analyze_h5_defaults_to_electrons(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            h5_path = tmp_path / "openpmd_005000.h5"
+            output = tmp_path / "particle_summary.csv"
+            write_synthetic_openpmd_file(h5_path)
+
+            rc = main(
+                [
+                    "analyze-h5",
+                    str(h5_path),
+                    "--energy-threshold-MeV",
+                    "0",
+                    "--output",
+                    str(output),
+                ]
+            )
+
+            self.assertEqual(rc, 0)
+
+            with output.open(newline="", encoding="utf-8") as handle:
+                rows = list(csv.DictReader(handle))
+
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["species"], "electrons")
+
 
 if __name__ == "__main__":
     unittest.main()
