@@ -15,6 +15,9 @@ dependencies = [
     "h5py",
 ]
 
+[project.scripts]
+lfmetrics = "lfmetrics.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 
