@@ -7,7 +7,11 @@ import numpy as np
 from lfmetrics.beam_metrics import compute_beam_metrics
 from lfmetrics.constants import C_LIGHT, M_E_KG
 from lfmetrics.particles import ParticleData
-from lfmetrics.plots import PLOT_FILENAMES, write_particle_plots
+from lfmetrics.plots import (
+    PLOT_FILENAMES,
+    _resolve_spectrum_min_energy,
+    write_particle_plots,
+)
 
 
 def make_particles() -> ParticleData:
@@ -60,6 +64,18 @@ class ParticlePlotTests(unittest.TestCase):
             for path in paths:
                 self.assertTrue(path.is_file())
                 self.assertGreater(path.stat().st_size, 0)
+
+    def test_spectrum_cutoff_defaults_to_hot_energy_threshold(self) -> None:
+        self.assertEqual(
+            _resolve_spectrum_min_energy(None, energy_threshold_MeV=5.0),
+            5.0,
+        )
+
+    def test_spectrum_cutoff_can_be_overridden_for_exploration(self) -> None:
+        self.assertEqual(
+            _resolve_spectrum_min_energy(10.0, energy_threshold_MeV=5.0),
+            10.0,
+        )
 
 
 if __name__ == "__main__":

@@ -98,6 +98,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=5.0,
         help="Energy threshold for selected/hot particles. Default: 5.0 MeV.",
     )
+    analyze_case.add_argument(
+        "--spectrum-min-energy-MeV",
+        type=float,
+        default=None,
+        help=(
+            "Lower kinetic-energy cutoff shown in energy_spectrum.png. "
+            "Default: same as --energy-threshold-MeV."
+        ),
+    )
     analyze_file.add_argument(
         "--output",
         type=Path,
@@ -140,6 +149,7 @@ def analyze_case(args: argparse.Namespace) -> Path:
             metrics,
             output_dir=plots_root / particles.species,
             energy_threshold_MeV=args.energy_threshold_MeV,
+            spectrum_min_energy_MeV=args.spectrum_min_energy_MeV,
         )
 
     output_path = write_particle_summary_csv(rows, output)

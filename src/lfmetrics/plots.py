@@ -37,6 +37,7 @@ def write_particle_plots(
     *,
     output_dir: str | Path,
     energy_threshold_MeV: float,
+    spectrum_min_energy_MeV: float | None = None,
     max_points: int = 200_000,
     spectrum_bins: int = 200,
 ) -> list[Path]:
@@ -57,6 +58,11 @@ def write_particle_plots(
         raise ValueError("max_points must be positive")
     if spectrum_bins <= 0:
         raise ValueError("spectrum_bins must be positive")
+
+    spectrum_min = _resolve_spectrum_min_energy(
+        spectrum_min_energy_MeV,
+        energy_threshold_MeV=threshold,
+    )
 
     output_paths = particle_plot_paths(output_dir)
     Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -87,6 +93,7 @@ def write_particle_plots(
         valid=valid,
         weights=weights,
         energy_threshold_MeV=threshold,
+        spectrum_min_energy_MeV=spectrum_min,
         spectrum_bins=spectrum_bins,
     )
 
@@ -197,6 +204,7 @@ def _save_energy_spectrum(
     valid: np.ndarray,
     weights: np.ndarray | None,
     energy_threshold_MeV: float,
+    spectrum_min_energy_MeV: float,
     spectrum_bins: int,
 ) -> Path:
     if not np.any(valid):
@@ -208,28 +216,46 @@ def _save_energy_spectrum(
             ylabel="weighted counts [a.u.]",
         )
 
-    energy = energy_mev[valid]
-    selected_weights = None if weights is None else weights[valid]
+    spectrum_mask = valid & (energy_mev >= spectrum_min_energy_MeV)
+    if not np.any(spectrum_mask):
+        return _save_no_data_plot(
+            path=path,
+            title=f"{particles.species} energy spectrum, step {particles.step}",
+            message=f"No valid particles with Ekin >= {spectrum_min_energy_MeV:g} MeV",
+            xlabel="electron kinetic energy [MeV]",
+            ylabel="weighted counts [a.u.]",
+        )
+
+    energy = energy_mev[spectrum_mask]
+    selected_weights = None if weights is None else weights[spectrum_mask]
     energy_max = float(np.max(energy))
-    upper = max(energy_max, energy_threshold_MeV * 1.2, 1.0)
+    upper = max(
+        energy_max,
+        energy_threshold_MeV * 1.2,
+        spectrum_min_energy_MeV + max(1.0, 0.1 * spectrum_min_energy_MeV),
+    )
     counts, edges = np.histogram(
         energy,
         bins=int(spectrum_bins),
-        range=(0.0, upper),
+        range=(spectrum_min_energy_MeV, upper),
         weights=selected_weights,
     )
 
     fig, ax = plt.subplots(figsize=(7.5, 4.8))
     ax.stairs(counts, edges, linewidth=1.2)
-    ax.axvline(
-        energy_threshold_MeV,
-        color="tab:red",
-        linestyle="--",
-        linewidth=1.0,
-        label=f"hot threshold = {energy_threshold_MeV:g} MeV",
-    )
+
+    if spectrum_min_energy_MeV <= energy_threshold_MeV <= upper:
+        ax.axvline(
+            energy_threshold_MeV,
+            color="tab:red",
+            linestyle="--",
+            linewidth=1.0,
+            label=f"hot threshold = {energy_threshold_MeV:g} MeV",
+        )
+
     ax.set_yscale("log")
-    ax.legend(loc="upper right")
+    if ax.get_legend_handles_labels()[0]:
+        ax.legend(loc="upper right")
 
     if selected_weights is None:
         quantity = f"N = {energy.size}"
@@ -250,12 +276,29 @@ def _save_energy_spectrum(
     )
     ax.set_xlabel("electron kinetic energy [MeV]")
     ax.set_ylabel(ylabel)
-    ax.set_title(f"{particles.species} energy spectrum, step {particles.step}")
+    ax.set_title(
+        f"{particles.species} energy spectrum, step {particles.step}\n"
+        f"plotted electrons: Ekin >= {spectrum_min_energy_MeV:g} MeV"
+    )
     ax.grid(True, alpha=0.25)
     fig.tight_layout()
     fig.savefig(path, dpi=180)
     plt.close(fig)
     return path
+
+
+def _resolve_spectrum_min_energy(
+    spectrum_min_energy_MeV: float | None,
+    *,
+    energy_threshold_MeV: float,
+) -> float:
+    if spectrum_min_energy_MeV is None:
+        return energy_threshold_MeV
+
+    cutoff = float(spectrum_min_energy_MeV)
+    if not np.isfinite(cutoff) or cutoff < 0.0:
+        raise ValueError("spectrum_min_energy_MeV must be a finite non-negative value")
+    return cutoff
 
 
 def _save_scatter_or_no_data(
