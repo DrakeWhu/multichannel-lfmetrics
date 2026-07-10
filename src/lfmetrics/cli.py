@@ -8,6 +8,7 @@ from typing import Sequence
 from .beam_metrics import compute_beam_metrics
 from .csv_io import write_particle_summary_csv
 from .openpmd_h5 import read_particles_from_case, read_particles_from_h5
+from .plots import write_particle_plots
 
 
 class LFMetricsCLIError(RuntimeError):
@@ -71,6 +72,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Output CSV path. Default: CASE_DIR/post/particle_summary.csv.",
     )
+    analyze_case.add_argument(
+        "--plots-dir",
+        type=Path,
+        default=None,
+        help=(
+            "Case-local directory for fixed PNG diagnostics. "
+            "Default: CASE_DIR/post/plots. Each species uses one child directory."
+        ),
+    )
 
     analyze_file = subparsers.add_parser(
         "analyze-h5",
@@ -107,6 +117,12 @@ def analyze_case(args: argparse.Namespace) -> Path:
     if output is None:
         output = case_dir / "post" / "particle_summary.csv"
 
+    plots_root = args.plots_dir
+    if plots_root is None:
+        plots_root = case_dir / "post" / "plots"
+    elif not plots_root.is_absolute():
+        plots_root = case_dir / plots_root
+
     rows: list[dict[str, object]] = []
     for species in parse_species_arg(args.species):
         particles = read_particles_from_case(
@@ -119,8 +135,16 @@ def analyze_case(args: argparse.Namespace) -> Path:
             energy_threshold_MeV=args.energy_threshold_MeV,
         )
         rows.append(metrics.as_row())
+        write_particle_plots(
+            particles,
+            metrics,
+            output_dir=plots_root / particles.species,
+            energy_threshold_MeV=args.energy_threshold_MeV,
+        )
 
-    return write_particle_summary_csv(rows, output)
+    output_path = write_particle_summary_csv(rows, output)
+    print(f"[lfmetrics] wrote plots under {plots_root}")
+    return output_path
 
 
 def analyze_h5(args: argparse.Namespace) -> Path:
