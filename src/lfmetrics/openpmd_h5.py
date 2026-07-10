@@ -113,16 +113,45 @@ def _read_component(
 
 def _read_optional_position_offset(
     group: h5py.Group, component_name: str, length: int
-) -> np.ndarray:
-    """Read optional openPMD positionOffset component, returning zeros when absent."""
+) -> np.ndarray | float:
+    """Read one optional openPMD ``positionOffset`` component.
+
+    WarpX/openPMD HDF5 output can encode a constant component as an HDF5
+    group whose scalar value is stored in its ``value`` attribute. Returning
+    that value as a scalar avoids materializing a full-length zero array for
+    every particle coordinate.
+    """
     if "positionOffset" not in group:
-        return np.zeros(length, dtype=float)
+        return 0.0
 
     offset = group["positionOffset"]
     if component_name not in offset:
-        return np.zeros(length, dtype=float)
+        return 0.0
 
-    return np.asarray(offset[component_name], dtype=float)
+    component = offset[component_name]
+
+    if isinstance(component, h5py.Group):
+        if "value" not in component.attrs:
+            raise ValueError(
+                "constant positionOffset component "
+                f"'{component_name}' is missing its 'value' attribute"
+            )
+
+        value = np.asarray(component.attrs["value"], dtype=float)
+        if value.size != 1:
+            raise ValueError(
+                "constant positionOffset component "
+                f"'{component_name}' has non-scalar value shape {value.shape}"
+            )
+        return float(value.reshape(-1)[0])
+
+    values = np.asarray(component, dtype=float)
+    if values.ndim != 1 or values.shape[0] != length:
+        raise ValueError(
+            f"positionOffset '{component_name}' shape {values.shape} "
+            f"does not match particle length {length}"
+        )
+    return values
 
 
 def _read_weighting(group: h5py.Group, length: int) -> np.ndarray | None:

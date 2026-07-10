@@ -37,6 +37,32 @@ def write_species(group, name, offset_z=0.0, with_weighting=True):
         species.create_dataset("weighting", data=np.array([10.0, 20.0]))
 
 
+def replace_position_offsets_with_warpx_constant_groups(path: Path) -> None:
+    """Reproduce WarpX openPMD's constant-component HDF5 representation."""
+    with h5py.File(path, "r+") as h5:
+        particles = h5["data"]["5000"]["particles"]
+        for species_name, species in particles.items():
+            del species["positionOffset"]
+            position_offset = species.create_group("positionOffset")
+            position_offset.attrs["macroWeighted"] = np.uint32(0)
+            position_offset.attrs["timeOffset"] = np.float32(0.0)
+            position_offset.attrs["unitDimension"] = np.array(
+                [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+            )
+            position_offset.attrs["weightingPower"] = 0.0
+
+            offset_z = 10.0 if species_name == "electrons" else 20.0
+            for component_name, value in (
+                ("x", 0.0),
+                ("y", 0.0),
+                ("z", offset_z),
+            ):
+                component = position_offset.create_group(component_name)
+                component.attrs["shape"] = np.array([2], dtype=np.uint64)
+                component.attrs["unitSI"] = 1.0
+                component.attrs["value"] = value
+
+
 def write_synthetic_openpmd_file(path: Path, step: int = 5000):
     with h5py.File(path, "w") as h5:
         data = h5.create_group("data")
@@ -104,6 +130,19 @@ class OpenPMDH5SyntheticTests(unittest.TestCase):
 
             particles = read_particles_from_case(case_dir, species="beam")
             self.assertEqual(particles.step, 5000)
+
+    def test_read_particles_from_h5_accepts_constant_position_offset_groups(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "openpmd_005000.h5"
+            write_synthetic_openpmd_file(path)
+            replace_position_offsets_with_warpx_constant_groups(path)
+
+            particles = read_particles_from_h5(path)
+
+            self.assertEqual(particles.species, "electrons")
+            np.testing.assert_allclose(particles.x_m, np.array([1.0, 2.0]))
+            np.testing.assert_allclose(particles.y_m, np.array([3.0, 4.0]))
+            np.testing.assert_allclose(particles.z_m, np.array([15.0, 16.0]))
 
 
 if __name__ == "__main__":
