@@ -40,4 +40,7 @@ post/
 particle_summary.csv
 particle_timeseries.csv
 
+# Zips
+*.zip
+
 # Keep explicitly copied small legacy sample logs if already tracked intentionally.
