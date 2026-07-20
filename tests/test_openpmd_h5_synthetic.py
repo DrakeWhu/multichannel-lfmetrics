@@ -73,6 +73,18 @@ def write_synthetic_openpmd_file(path: Path, step: int = 5000):
         write_species(particles, "beam", offset_z=20.0, with_weighting=True)
 
 
+def set_nontrivial_unit_si(path: Path) -> None:
+    with h5py.File(path, "r+") as h5:
+        species = h5["data"]["5000"]["particles"]["electrons"]
+        for component in species["position"].values():
+            component.attrs["unitSI"] = 1.0e-6
+        for component in species["positionOffset"].values():
+            component.attrs["unitSI"] = 1.0e-6
+        for component in species["momentum"].values():
+            component.attrs["unitSI"] = 2.0
+        species["weighting"].attrs["unitSI"] = 0.5
+
+
 class OpenPMDH5SyntheticTests(unittest.TestCase):
     def test_parse_openpmd_step(self):
         self.assertEqual(parse_openpmd_step("openpmd_005000.h5"), 5000)
@@ -143,6 +155,22 @@ class OpenPMDH5SyntheticTests(unittest.TestCase):
             np.testing.assert_allclose(particles.x_m, np.array([1.0, 2.0]))
             np.testing.assert_allclose(particles.y_m, np.array([3.0, 4.0]))
             np.testing.assert_allclose(particles.z_m, np.array([15.0, 16.0]))
+
+    def test_read_particles_from_h5_applies_unit_si(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "openpmd_005000.h5"
+            write_synthetic_openpmd_file(path)
+            set_nontrivial_unit_si(path)
+
+            particles = read_particles_from_h5(path, species="electrons")
+
+            np.testing.assert_allclose(particles.x_m, np.array([1.0e-6, 2.0e-6]))
+            np.testing.assert_allclose(particles.y_m, np.array([3.0e-6, 4.0e-6]))
+            np.testing.assert_allclose(particles.z_m, np.array([15.0e-6, 16.0e-6]))
+            np.testing.assert_allclose(particles.px_si, np.array([0.2, 0.4]))
+            np.testing.assert_allclose(particles.py_si, np.array([0.6, 0.8]))
+            np.testing.assert_allclose(particles.pz_si, np.array([1.0, 1.2]))
+            np.testing.assert_allclose(particles.weighting, np.array([5.0, 10.0]))
 
 
 if __name__ == "__main__":
