@@ -69,6 +69,9 @@ class CLITests(unittest.TestCase):
             self.assertEqual(rows[0]["species"], "beam")
             self.assertEqual(rows[0]["step"], "5000")
             self.assertGreater(float(rows[0]["energy_p95_MeV"]), 0.0)
+            self.assertEqual(rows[0]["soft100_schema_version"], "soft100_v1")
+            self.assertEqual(float(rows[0]["soft100_energy_target_MeV"]), 100.0)
+            self.assertGreater(float(rows[0]["charge_soft100_pC"]), 0.0)
 
     def test_analyze_case_writes_default_post_output_for_multiple_species(self):
         with tempfile.TemporaryDirectory() as tmp:

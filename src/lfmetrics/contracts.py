@@ -3,9 +3,13 @@ from __future__ import annotations
 from dataclasses import fields
 
 from .beam_metrics import BeamMetrics
+from .soft100 import Soft100Metrics
 
 
-PARTICLE_SUMMARY_COLUMNS = [field.name for field in fields(BeamMetrics)]
+PARTICLE_SUMMARY_COLUMNS = [
+    *[field.name for field in fields(BeamMetrics)],
+    *[field.name for field in fields(Soft100Metrics)],
+]
 
 
 def validate_particle_summary_row(row: dict[str, object]) -> None:

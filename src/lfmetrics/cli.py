@@ -9,6 +9,7 @@ from .beam_metrics import compute_beam_metrics
 from .csv_io import write_particle_summary_csv
 from .openpmd_h5 import read_particles_from_case, read_particles_from_h5
 from .plots import write_particle_plots
+from .soft100 import compute_soft100_metrics
 
 
 class LFMetricsCLIError(RuntimeError):
@@ -143,7 +144,8 @@ def analyze_case(args: argparse.Namespace) -> Path:
             particles,
             energy_threshold_MeV=args.energy_threshold_MeV,
         )
-        rows.append(metrics.as_row())
+        soft100 = compute_soft100_metrics(particles)
+        rows.append({**metrics.as_row(), **soft100.as_row()})
         write_particle_plots(
             particles,
             metrics,
@@ -169,7 +171,8 @@ def analyze_h5(args: argparse.Namespace) -> Path:
             particles,
             energy_threshold_MeV=args.energy_threshold_MeV,
         )
-        rows.append(metrics.as_row())
+        soft100 = compute_soft100_metrics(particles)
+        rows.append({**metrics.as_row(), **soft100.as_row()})
 
     return write_particle_summary_csv(rows, args.output)
 
