@@ -23,7 +23,7 @@ from .publication_particles import (
 from .wake_fields import _assert_plane_compatible
 
 
-PUBLICATION_FIG9_SCHEMA = "multichannel_publication_fig9_snapshot_v1"
+PUBLICATION_FIG9_SCHEMA = "multichannel_publication_fig9_snapshot_v2"
 
 
 @dataclass(frozen=True)
@@ -60,10 +60,12 @@ class PublicationFig9SnapshotResult:
     n_tracked_yz_plotted: int
     n_tracked_xy_plotted: int
     ez_color_limit_TV_m: float
-    bperp_color_limit_kT: float
     energy_color_min_MeV: float
     energy_color_max_MeV: float
     field_slice_method: str
+    field_background_record: str
+    field_background_unit: str
+    xy_vector_overlay: str
     background_particle_mode: str
     tracked_particle_mode: str
     background_sampling: str
@@ -243,10 +245,12 @@ def _cropped_matrix_values(
 
 def _background_scatter_style(n_points: int) -> tuple[float, float]:
     if n_points <= 5_000:
-        return 1.8, 0.34
+        return 3.0, 0.55
     if n_points <= 20_000:
-        return 0.9, 0.24
-    return 0.45, 0.18
+        return 1.8, 0.43
+    if n_points <= 50_000:
+        return 1.1, 0.34
+    return 0.75, 0.28
 
 
 def _tracked_scatter_style(n_points: int) -> tuple[float, float]:
@@ -283,7 +287,10 @@ def _panel_label(ax, label: str) -> None:
     )
 
 
-def _validate_time_alignment(frame: PublicationParticleFrame, *planes: MeshPlaneData) -> None:
+def _validate_time_alignment(
+    frame: PublicationParticleFrame,
+    *planes: MeshPlaneData,
+) -> None:
     for plane in planes:
         if plane.step != frame.step:
             raise ValueError("Particle and field diagnostic steps do not match")
@@ -308,19 +315,21 @@ def write_publication_fig9_snapshot(
     transverse_half_width_m: float = 6.0e-6,
     xi_padding_back_m: float = 4.0e-6,
     xi_padding_front_m: float = 6.0e-6,
-    max_background_points_per_panel: int = 40_000,
+    max_background_points_per_panel: int = 80_000,
     field_percentile: float = 99.5,
-    magnetic_percentile: float = 99.5,
     energy_percentile: float = 99.0,
     field_slice_method: str = "linear",
     quiver_max_arrows_per_axis: int = 23,
     dpi: int = 220,
 ) -> PublicationFig9SnapshotResult:
-    """Write one three-panel field/particle snapshot inspired by paper Fig. 9.
+    """Write one coherent three-panel field/particle snapshot.
 
-    Background electrons are selected in a physical slab and may be thinned only
-    for rendering. All present tracked final-bunch IDs are projected into each
-    panel without thinning and are colored by kinetic energy.
+    ``E_z`` is used as the common scalar background in ``xy``, ``xz`` and
+    ``yz``. The transverse magnetic field is retained only as a quiver overlay
+    in ``xy``. Background electrons are selected in physical slabs and may be
+    thinned only for rendering. All present tracked final-bunch IDs are
+    projected into each panel without thinning and are colored by kinetic
+    energy.
     """
 
     particle_path = Path(particle_h5).resolve(strict=False)
@@ -330,9 +339,13 @@ def write_publication_fig9_snapshot(
 
     for source in (particle_path, field_path, tracked_path):
         if not source.is_file():
-            raise FileNotFoundError(f"Required publication source does not exist: {source}")
+            raise FileNotFoundError(
+                f"Required publication source does not exist: {source}"
+            )
     if output.exists():
-        raise FileExistsError(f"Refusing to overwrite publication output: {output}")
+        raise FileExistsError(
+            f"Refusing to overwrite publication output: {output}"
+        )
 
     slab_half_width = _validated_positive_finite(
         "background_slab_half_width_m",
@@ -351,15 +364,21 @@ def write_publication_fig9_snapshot(
         xi_padding_front_m,
     )
     field_pct = _validated_percentile("field_percentile", field_percentile)
-    magnetic_pct = _validated_percentile(
-        "magnetic_percentile",
-        magnetic_percentile,
-    )
     energy_pct = _validated_percentile("energy_percentile", energy_percentile)
-    if not isinstance(max_background_points_per_panel, int) or max_background_points_per_panel <= 0:
-        raise ValueError("max_background_points_per_panel must be a positive integer")
-    if not isinstance(quiver_max_arrows_per_axis, int) or quiver_max_arrows_per_axis < 2:
-        raise ValueError("quiver_max_arrows_per_axis must be an integer >= 2")
+    if (
+        not isinstance(max_background_points_per_panel, int)
+        or max_background_points_per_panel <= 0
+    ):
+        raise ValueError(
+            "max_background_points_per_panel must be a positive integer"
+        )
+    if (
+        not isinstance(quiver_max_arrows_per_axis, int)
+        or quiver_max_arrows_per_axis < 2
+    ):
+        raise ValueError(
+            "quiver_max_arrows_per_axis must be an integer >= 2"
+        )
     if not isinstance(dpi, int) or dpi <= 0:
         raise ValueError("dpi must be a positive integer")
 
@@ -371,9 +390,13 @@ def write_publication_fig9_snapshot(
     tracked_ids = read_tracked_particle_ids(tracked_path)
     tracked_present, missing_tracked = _tracked_frame_mask(frame, tracked_ids)
     if not np.any(tracked_present):
-        raise ValueError("None of the tracked final-bunch IDs are present in this frame")
+        raise ValueError(
+            "None of the tracked final-bunch IDs are present in this frame"
+        )
     if frame.particles.weighting is None:
-        raise ValueError("Particle weighting is required for publication snapshots")
+        raise ValueError(
+            "Particle weighting is required for publication snapshots"
+        )
 
     weights = np.asarray(frame.particles.weighting, dtype=float)
     x_m = np.asarray(frame.particles.x_m, dtype=float)
@@ -386,6 +409,15 @@ def write_publication_fig9_snapshot(
     center_y = _weighted_median(y_m[tracked_present], tracked_weights)
     center_z = _weighted_median(z_m[tracked_present], tracked_weights)
 
+    ez_xy = read_mesh_plane(
+        field_path,
+        "E",
+        "z",
+        plane="xy",
+        coordinate_m=center_z,
+        method=field_slice_method,
+        iteration=int(step),
+    )
     ez_xz = read_mesh_plane(
         field_path,
         "E",
@@ -422,9 +454,15 @@ def write_publication_fig9_snapshot(
         method=field_slice_method,
         iteration=int(step),
     )
-    _assert_plane_compatible(bx_xy, by_xy, candidate_label="B/y")
-    _validate_time_alignment(frame, ez_xz, ez_yz, bx_xy, by_xy)
+    _assert_plane_compatible(ez_xy, bx_xy, candidate_label="B/x")
+    _assert_plane_compatible(ez_xy, by_xy, candidate_label="B/y")
+    _validate_time_alignment(frame, ez_xy, ez_xz, ez_yz, bx_xy, by_xy)
 
+    x_xy, y_xy, ez_xy_matrix = _plane_for_display(
+        ez_xy,
+        horizontal_axis="x",
+        vertical_axis="y",
+    )
     z_xz, x_grid, ez_xz_matrix = _plane_for_display(
         ez_xz,
         horizontal_axis="z",
@@ -435,7 +473,7 @@ def write_publication_fig9_snapshot(
         horizontal_axis="z",
         vertical_axis="y",
     )
-    x_xy, y_xy, bx_matrix = _plane_for_display(
+    x_xy_bx, y_xy_bx, bx_matrix = _plane_for_display(
         bx_xy,
         horizontal_axis="x",
         vertical_axis="y",
@@ -445,13 +483,26 @@ def write_publication_fig9_snapshot(
         horizontal_axis="x",
         vertical_axis="y",
     )
-    if not np.allclose(x_xy, x_xy_by, rtol=1.0e-12, atol=1.0e-18) or not np.allclose(
-        y_xy,
-        y_xy_by,
-        rtol=1.0e-12,
-        atol=1.0e-18,
+
+    for label, candidate_x, candidate_y in (
+        ("B/x", x_xy_bx, y_xy_bx),
+        ("B/y", x_xy_by, y_xy_by),
     ):
-        raise ValueError("B/x and B/y transverse coordinates do not match")
+        if not np.allclose(
+            x_xy,
+            candidate_x,
+            rtol=1.0e-12,
+            atol=1.0e-18,
+        ) or not np.allclose(
+            y_xy,
+            candidate_y,
+            rtol=1.0e-12,
+            atol=1.0e-18,
+        ):
+            raise ValueError(
+                f"E/z and {label} transverse coordinates do not match"
+            )
+
     if not np.allclose(z_xz, z_yz, rtol=1.0e-12, atol=1.0e-18):
         raise ValueError("Longitudinal xz and yz z coordinates do not match")
 
@@ -473,9 +524,22 @@ def write_publication_fig9_snapshot(
     if xi_limits[0] >= xi_limits[1]:
         raise ValueError("Derived xi publication limits are empty")
 
-    x_limits = (center_x - transverse_half_width, center_x + transverse_half_width)
-    y_limits = (center_y - transverse_half_width, center_y + transverse_half_width)
+    x_limits = (
+        center_x - transverse_half_width,
+        center_x + transverse_half_width,
+    )
+    y_limits = (
+        center_y - transverse_half_width,
+        center_y + transverse_half_width,
+    )
 
+    ez_xy_crop = _cropped_matrix_values(
+        x_xy,
+        y_xy,
+        ez_xy_matrix,
+        x_limits,
+        y_limits,
+    )
     ez_xz_crop = _cropped_matrix_values(
         xi_grid,
         x_grid,
@@ -491,23 +555,27 @@ def write_publication_fig9_snapshot(
         y_limits,
     )
     ez_limit_v_m = _finite_nonzero_percentile(
-        np.concatenate((ez_xz_crop.ravel(), ez_yz_crop.ravel())),
+        np.concatenate(
+            (
+                ez_xy_crop.ravel(),
+                ez_xz_crop.ravel(),
+                ez_yz_crop.ravel(),
+            )
+        ),
         field_pct,
     )
 
-    bperp_matrix = np.hypot(bx_matrix, by_matrix)
-    bperp_crop = _cropped_matrix_values(
-        x_xy,
-        y_xy,
-        bperp_matrix,
-        x_limits,
-        y_limits,
-    )
-    bperp_limit_t = _finite_nonzero_percentile(bperp_crop, magnetic_pct)
-
     tracked_energy = energy_MeV[tracked_present]
-    energy_vmax = weighted_percentile(tracked_energy, energy_pct, tracked_weights)
-    if energy_vmax is None or not np.isfinite(energy_vmax) or energy_vmax <= 0.0:
+    energy_vmax = weighted_percentile(
+        tracked_energy,
+        energy_pct,
+        tracked_weights,
+    )
+    if (
+        energy_vmax is None
+        or not np.isfinite(energy_vmax)
+        or energy_vmax <= 0.0
+    ):
         energy_vmax = float(np.max(tracked_energy))
     if not np.isfinite(energy_vmax) or energy_vmax <= 0.0:
         energy_vmax = 1.0e-6
@@ -568,28 +636,66 @@ def write_publication_fig9_snapshot(
 
     fig, axes = plt.subplots(1, 3, figsize=(16.2, 5.25))
     ax_xy, ax_xz, ax_yz = axes
-    fig.subplots_adjust(left=0.055, right=0.985, bottom=0.13, top=0.80, wspace=0.18)
+    fig.subplots_adjust(
+        left=0.055,
+        right=0.985,
+        bottom=0.13,
+        top=0.80,
+        wspace=0.18,
+    )
 
-    x_edges = _cell_edges(x_xy)
-    y_edges = _cell_edges(y_xy)
-    b_image = ax_xy.pcolormesh(
-        x_edges * 1.0e6,
-        y_edges * 1.0e6,
-        bperp_matrix / 1.0e3,
+    ez_vmin = -ez_limit_v_m / 1.0e12
+    ez_vmax = ez_limit_v_m / 1.0e12
+
+    ax_xy.pcolormesh(
+        _cell_edges(x_xy) * 1.0e6,
+        _cell_edges(y_xy) * 1.0e6,
+        ez_xy_matrix / 1.0e12,
         shading="flat",
-        cmap="magma",
-        vmin=0.0,
-        vmax=bperp_limit_t / 1.0e3,
+        cmap="RdBu_r",
+        vmin=ez_vmin,
+        vmax=ez_vmax,
+        rasterized=True,
+    )
+    ez_xz_image = ax_xz.pcolormesh(
+        xi_edges * 1.0e6,
+        _cell_edges(x_grid) * 1.0e6,
+        ez_xz_matrix / 1.0e12,
+        shading="flat",
+        cmap="RdBu_r",
+        vmin=ez_vmin,
+        vmax=ez_vmax,
+        rasterized=True,
+    )
+    ax_yz.pcolormesh(
+        (_cell_edges(z_yz) - z_front_grid) * 1.0e6,
+        _cell_edges(y_grid) * 1.0e6,
+        ez_yz_matrix / 1.0e12,
+        shading="flat",
+        cmap="RdBu_r",
+        vmin=ez_vmin,
+        vmax=ez_vmax,
         rasterized=True,
     )
 
     qx_indices = np.unique(
-        np.linspace(0, x_xy.size - 1, min(quiver_max_arrows_per_axis, x_xy.size)).astype(int)
+        np.linspace(
+            0,
+            x_xy.size - 1,
+            min(quiver_max_arrows_per_axis, x_xy.size),
+        ).astype(int)
     )
     qy_indices = np.unique(
-        np.linspace(0, y_xy.size - 1, min(quiver_max_arrows_per_axis, y_xy.size)).astype(int)
+        np.linspace(
+            0,
+            y_xy.size - 1,
+            min(quiver_max_arrows_per_axis, y_xy.size),
+        ).astype(int)
     )
-    qx_grid, qy_grid = np.meshgrid(x_xy[qx_indices], y_xy[qy_indices])
+    qx_grid, qy_grid = np.meshgrid(
+        x_xy[qx_indices],
+        y_xy[qy_indices],
+    )
     qbx = bx_matrix[np.ix_(qy_indices, qx_indices)]
     qby = by_matrix[np.ix_(qy_indices, qx_indices)]
     qmag = np.hypot(qbx, qby)
@@ -607,37 +713,15 @@ def write_publication_fig9_snapshot(
         qy_grid * 1.0e6,
         qu,
         qv,
-        color="white",
-        alpha=0.82,
+        color="0.10",
+        alpha=0.78,
         angles="xy",
         scale_units="width",
         scale=18.0,
-        width=0.0032,
+        width=0.0030,
         headwidth=3.2,
         headlength=4.2,
-        zorder=3,
-    )
-
-    z_edges_yz = _cell_edges(z_yz) - z_front_grid
-    ez_xz_image = ax_xz.pcolormesh(
-        xi_edges * 1.0e6,
-        _cell_edges(x_grid) * 1.0e6,
-        ez_xz_matrix / 1.0e12,
-        shading="flat",
-        cmap="RdBu_r",
-        vmin=-ez_limit_v_m / 1.0e12,
-        vmax=ez_limit_v_m / 1.0e12,
-        rasterized=True,
-    )
-    ez_yz_image = ax_yz.pcolormesh(
-        z_edges_yz * 1.0e6,
-        _cell_edges(y_grid) * 1.0e6,
-        ez_yz_matrix / 1.0e12,
-        shading="flat",
-        cmap="RdBu_r",
-        vmin=-ez_limit_v_m / 1.0e12,
-        vmax=ez_limit_v_m / 1.0e12,
-        rasterized=True,
+        zorder=5,
     )
 
     for ax, background_indices, horizontal_values, vertical_values in (
@@ -645,12 +729,14 @@ def write_publication_fig9_snapshot(
         (ax_xz, background_xz_indices, xi_particles, x_m),
         (ax_yz, background_yz_indices, xi_particles, y_m),
     ):
-        size, alpha = _background_scatter_style(int(background_indices.size))
+        size, alpha = _background_scatter_style(
+            int(background_indices.size)
+        )
         ax.scatter(
             horizontal_values[background_indices] * 1.0e6,
             vertical_values[background_indices] * 1.0e6,
             s=size,
-            c="0.38",
+            c="0.18",
             alpha=alpha,
             edgecolors="none",
             rasterized=True,
@@ -663,7 +749,9 @@ def write_publication_fig9_snapshot(
         (ax_xz, tracked_xz_indices, xi_particles, x_m),
         (ax_yz, tracked_yz_indices, xi_particles, y_m),
     ):
-        size, alpha = _tracked_scatter_style(int(tracked_indices.size))
+        size, alpha = _tracked_scatter_style(
+            int(tracked_indices.size)
+        )
         tracked_scatter = ax.scatter(
             horizontal_values[tracked_indices] * 1.0e6,
             vertical_values[tracked_indices] * 1.0e6,
@@ -682,9 +770,22 @@ def write_publication_fig9_snapshot(
     if tracked_scatter is None:
         raise AssertionError("Internal error: no tracked scatter was created")
 
-    _top_colorbar(fig, ax_xy, b_image, r"$|B_\perp|$ [kT]")
     _top_colorbar(fig, ax_xz, ez_xz_image, r"$E_z$ [TV/m]")
-    _top_colorbar(fig, ax_yz, tracked_scatter, r"tracked bunch $E_{\mathrm{kin}}$ [MeV]")
+    _top_colorbar(
+        fig,
+        ax_yz,
+        tracked_scatter,
+        r"tracked bunch $E_{\mathrm{kin}}$ [MeV]",
+    )
+    ax_xy.text(
+        0.5,
+        1.055,
+        r"$E_z$ background; $(B_x,B_y)$ direction overlay",
+        transform=ax_xy.transAxes,
+        ha="center",
+        va="bottom",
+        fontsize=8,
+    )
 
     ax_xy.set_xlabel(r"$x$ [$\mu$m]")
     ax_xy.set_ylabel(r"$y$ [$\mu$m]")
@@ -706,7 +807,8 @@ def write_publication_fig9_snapshot(
     _panel_label(ax_yz, "(c)")
 
     fig.suptitle(
-        f"{case_label} — step {frame.step}, t = {frame.time_s * 1.0e15:.2f} fs",
+        f"{case_label} — step {frame.step}, "
+        f"t = {frame.time_s * 1.0e15:.2f} fs",
         fontsize=12,
         y=0.985,
     )
@@ -739,30 +841,42 @@ def write_publication_fig9_snapshot(
         y_limits_m=(float(y_limits[0]), float(y_limits[1])),
         background_slab_half_width_m=slab_half_width,
         max_background_points_per_panel=max_background_points_per_panel,
-        n_background_xz_available=int(np.count_nonzero(background_xz_mask)),
+        n_background_xz_available=int(
+            np.count_nonzero(background_xz_mask)
+        ),
         n_background_xz_plotted=int(background_xz_indices.size),
-        n_background_yz_available=int(np.count_nonzero(background_yz_mask)),
+        n_background_yz_available=int(
+            np.count_nonzero(background_yz_mask)
+        ),
         n_background_yz_plotted=int(background_yz_indices.size),
-        n_background_xy_available=int(np.count_nonzero(background_xy_mask)),
+        n_background_xy_available=int(
+            np.count_nonzero(background_xy_mask)
+        ),
         n_background_xy_plotted=int(background_xy_indices.size),
         n_tracked_xz_plotted=int(tracked_xz_indices.size),
         n_tracked_yz_plotted=int(tracked_yz_indices.size),
         n_tracked_xy_plotted=int(tracked_xy_indices.size),
         ez_color_limit_TV_m=ez_limit_v_m / 1.0e12,
-        bperp_color_limit_kT=bperp_limit_t / 1.0e3,
         energy_color_min_MeV=energy_vmin,
         energy_color_max_MeV=float(energy_vmax),
         field_slice_method=str(field_slice_method),
+        field_background_record="E/z",
+        field_background_unit="TV/m",
+        xy_vector_overlay="B/x,B/y quiver",
         background_particle_mode=(
-            "physical slab around each field cut, then deterministic visual thinning"
+            "physical slab around each field cut, then deterministic "
+            "visual thinning with enhanced dark-gray visibility"
         ),
         tracked_particle_mode=(
-            "all present fixed final-bunch IDs projected into each panel; no thinning"
+            "all present fixed final-bunch IDs projected into each panel; "
+            "no thinning"
         ),
-        background_sampling="smallest splitmix64 hashes of persistent particle IDs",
+        background_sampling=(
+            "smallest splitmix64 hashes of persistent particle IDs"
+        ),
         quiver_representation=(
-            "B_perp direction with magnitude normalized to p95 and clipped at unity; "
-            "field magnitude remains encoded by the background color"
+            "B_perp direction with magnitude normalized to p95 and clipped "
+            "at unity; E_z remains the common scalar background"
         ),
     )
 
@@ -770,21 +884,49 @@ def write_publication_fig9_snapshot(
         "schema": PUBLICATION_FIG9_SCHEMA,
         "result": asdict(result),
         "field_percentile": field_pct,
-        "magnetic_percentile": magnetic_pct,
         "energy_percentile": energy_pct,
-        "xi_definition": "z_particle_or_cell_center - z_front_grid_from_field_edges",
+        "field_background_record": "E/z",
+        "field_background_unit": "TV/m",
+        "field_background_shared_scale": True,
+        "xy_vector_overlay": "B/x,B/y quiver",
+        "xi_definition": (
+            "z_particle_or_cell_center - z_front_grid_from_field_edges"
+        ),
         "background_particle_ids_plotted": {
-            "xy": [int(value) for value in frame.ids[background_xy_indices]],
-            "xz": [int(value) for value in frame.ids[background_xz_indices]],
-            "yz": [int(value) for value in frame.ids[background_yz_indices]],
+            "xy": [
+                int(value)
+                for value in frame.ids[background_xy_indices]
+            ],
+            "xz": [
+                int(value)
+                for value in frame.ids[background_xz_indices]
+            ],
+            "yz": [
+                int(value)
+                for value in frame.ids[background_yz_indices]
+            ],
         },
         "tracked_particle_ids_plotted": {
-            "xy": [int(value) for value in frame.ids[tracked_xy_indices]],
-            "xz": [int(value) for value in frame.ids[tracked_xz_indices]],
-            "yz": [int(value) for value in frame.ids[tracked_yz_indices]],
+            "xy": [
+                int(value)
+                for value in frame.ids[tracked_xy_indices]
+            ],
+            "xz": [
+                int(value)
+                for value in frame.ids[tracked_xz_indices]
+            ],
+            "yz": [
+                int(value)
+                for value in frame.ids[tracked_yz_indices]
+            ],
         },
-        "missing_tracked_particle_ids": [int(value) for value in missing_tracked],
+        "missing_tracked_particle_ids": [
+            int(value) for value in missing_tracked
+        ],
     }
     manifest_path = output / "manifest.json"
-    manifest_path.write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2) + "\n",
+        encoding="utf-8",
+    )
     return result
