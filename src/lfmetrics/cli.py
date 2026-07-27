@@ -19,6 +19,10 @@ from .tracking import (
     write_final_bunch_selection,
     write_tracking_outputs,
 )
+from .trajectory_analysis import (
+    DEFAULT_ENERGY_THRESHOLDS_MEV,
+    analyze_trajectory_file,
+)
 
 
 class LFMetricsCLIError(RuntimeError):
@@ -38,6 +42,15 @@ def parse_species_arg(value: str | None) -> list[str | None]:
     if not species:
         return [None]
     return species
+
+
+def parse_float_list(value: str) -> tuple[float, ...]:
+    values = tuple(float(item.strip()) for item in value.split(",") if item.strip())
+    if not values:
+        raise argparse.ArgumentTypeError("at least one numeric value is required")
+    if any(not np.isfinite(item) or item < 0.0 for item in values):
+        raise argparse.ArgumentTypeError("values must be finite and non-negative")
+    return values
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -92,6 +105,19 @@ def build_parser() -> argparse.ArgumentParser:
     backtrack.add_argument("--species", default="electrons")
     backtrack.add_argument("--diagnostics-dir", default="3D")
     backtrack.add_argument("--output-dir", type=Path, required=True)
+
+    trajectory = subparsers.add_parser(
+        "analyze-trajectories",
+        help="Analyze a bunch_trajectories.npz file by origin cohort and energy crossings.",
+    )
+    trajectory.add_argument("trajectory_npz", type=Path)
+    trajectory.add_argument("--output-dir", type=Path, required=True)
+    trajectory.add_argument(
+        "--energy-thresholds-MeV",
+        type=parse_float_list,
+        default=DEFAULT_ENERGY_THRESHOLDS_MEV,
+        help="Comma-separated kinetic-energy thresholds. Default: 1,5,10,20.",
+    )
 
     return parser
 
@@ -185,6 +211,19 @@ def backtrack_bunch_command(args: argparse.Namespace) -> Path:
     return args.output_dir
 
 
+def analyze_trajectories_command(args: argparse.Namespace) -> Path:
+    trajectory_npz = args.trajectory_npz.resolve(strict=False)
+    if not trajectory_npz.is_file():
+        raise LFMetricsCLIError(f"Trajectory NPZ does not exist: {trajectory_npz}")
+    summary = analyze_trajectory_file(
+        trajectory_npz,
+        args.output_dir,
+        energy_thresholds_MeV=args.energy_thresholds_MeV,
+    )
+    print(json.dumps(summary, indent=2))
+    return args.output_dir
+
+
 def _main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -197,6 +236,8 @@ def _main(argv: Sequence[str] | None = None) -> int:
         output = select_final_bunch_command(args)
     elif args.command == "backtrack-bunch":
         output = backtrack_bunch_command(args)
+    elif args.command == "analyze-trajectories":
+        output = analyze_trajectories_command(args)
     else:
         raise LFMetricsCLIError(f"Unknown command: {args.command}")
 
