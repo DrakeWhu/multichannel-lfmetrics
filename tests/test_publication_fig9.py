@@ -13,14 +13,21 @@ from lfmetrics.publication_fig9 import (
 )
 
 
-def write_field_file(path: Path, *, step: int = 1400, time_s: float = 2.0e-13) -> None:
+def write_field_file(
+    path: Path,
+    *,
+    step: int = 1400,
+    time_s: float = 2.0e-13,
+) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     shape = (8, 10, 12)  # z, y, x
     z_index, y_index, x_index = np.indices(shape)
 
     ez_values = (
         np.sin(0.5 * z_index)
-        * np.exp(-((x_index - 5.5) ** 2 + (y_index - 4.5) ** 2) / 20.0)
+        * np.exp(
+            -((x_index - 5.5) ** 2 + (y_index - 4.5) ** 2) / 20.0
+        )
         * 2.0e12
     )
     bx_values = -(y_index - 4.5) * 2.0e3
@@ -39,14 +46,21 @@ def write_field_file(path: Path, *, step: int = 1400, time_s: float = 2.0e-13) -
             record = fields.create_group(record_name)
             record.attrs["axisLabels"] = np.asarray([b"z", b"y", b"x"])
             record.attrs["gridSpacing"] = np.asarray([1.0, 1.0, 1.0])
-            record.attrs["gridGlobalOffset"] = np.asarray([8.0, -5.0, -6.0])
+            record.attrs["gridGlobalOffset"] = np.asarray(
+                [8.0, -5.0, -6.0]
+            )
             record.attrs["gridUnitSI"] = 1.0e-6
             record.attrs["geometry"] = "cartesian"
             record.attrs["dataOrder"] = "C"
 
             for component_name, values in components.items():
-                component = record.create_dataset(component_name, data=values)
-                component.attrs["position"] = np.asarray([0.5, 0.5, 0.5])
+                component = record.create_dataset(
+                    component_name,
+                    data=values,
+                )
+                component.attrs["position"] = np.asarray(
+                    [0.5, 0.5, 0.5]
+                )
                 component.attrs["unitSI"] = 1.0
 
 
@@ -69,10 +83,15 @@ def write_particle_file(
         iteration = h5.create_group("data").create_group(str(step))
         iteration.attrs["time"] = time_s
         iteration.attrs["timeUnitSI"] = 1.0
-        electrons = iteration.create_group("particles").create_group("electrons")
+        electrons = iteration.create_group("particles").create_group(
+            "electrons"
+        )
         electrons.create_dataset("id", data=ids)
 
-        weighting = electrons.create_dataset("weighting", data=np.linspace(1.0, 2.0, n))
+        weighting = electrons.create_dataset(
+            "weighting",
+            data=np.linspace(1.0, 2.0, n),
+        )
         weighting.attrs["unitSI"] = 1.0
 
         position = electrons.create_group("position")
@@ -106,15 +125,23 @@ class PublicationFig9Tests(unittest.TestCase):
     def test_deterministic_background_sample_is_repeatable_and_bounded(self):
         ids = np.arange(1, 101, dtype=np.uint64)
         mask = np.ones(ids.size, dtype=bool)
-        first = deterministic_background_indices(mask, ids, max_points=17)
-        second = deterministic_background_indices(mask, ids, max_points=17)
+        first = deterministic_background_indices(
+            mask,
+            ids,
+            max_points=17,
+        )
+        second = deterministic_background_indices(
+            mask,
+            ids,
+            max_points=17,
+        )
 
         np.testing.assert_array_equal(first, second)
         self.assertEqual(first.size, 17)
         self.assertEqual(np.unique(first).size, first.size)
         self.assertTrue(np.all(mask[first]))
 
-    def test_writes_three_panel_snapshot_and_complete_manifest(self):
+    def test_writes_coherent_three_panel_snapshot_and_complete_manifest(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             particle_h5 = root / "3D" / "openpmd_001400.h5"
@@ -152,7 +179,10 @@ class PublicationFig9Tests(unittest.TestCase):
 
             self.assertEqual(result.step, 1400)
             self.assertEqual(result.n_electrons_total, 60)
-            self.assertEqual(result.n_tracked_requested, tracked_ids.size)
+            self.assertEqual(
+                result.n_tracked_requested,
+                tracked_ids.size,
+            )
             self.assertEqual(result.n_tracked_present, tracked_ids.size)
             self.assertEqual(result.n_tracked_missing, 0)
             self.assertLessEqual(result.n_background_xy_plotted, 11)
@@ -162,14 +192,30 @@ class PublicationFig9Tests(unittest.TestCase):
             self.assertGreater(result.n_tracked_xz_plotted, 0)
             self.assertGreater(result.n_tracked_yz_plotted, 0)
             self.assertGreater(result.ez_color_limit_TV_m, 0.0)
-            self.assertGreater(result.bperp_color_limit_kT, 0.0)
             self.assertGreater(result.energy_color_max_MeV, 0.0)
+            self.assertEqual(result.field_background_record, "E/z")
+            self.assertEqual(result.field_background_unit, "TV/m")
+            self.assertEqual(result.xy_vector_overlay, "B/x,B/y quiver")
 
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest = json.loads(
+                manifest_path.read_text(encoding="utf-8")
+            )
             self.assertEqual(manifest["schema"], PUBLICATION_FIG9_SCHEMA)
+            self.assertEqual(manifest["field_background_record"], "E/z")
+            self.assertEqual(manifest["field_background_unit"], "TV/m")
+            self.assertTrue(manifest["field_background_shared_scale"])
+            self.assertEqual(
+                manifest["xy_vector_overlay"],
+                "B/x,B/y quiver",
+            )
+            self.assertNotIn(
+                "bperp_color_limit_kT",
+                manifest["result"],
+            )
             self.assertEqual(
                 manifest["result"]["tracked_particle_mode"],
-                "all present fixed final-bunch IDs projected into each panel; no thinning",
+                "all present fixed final-bunch IDs projected into each "
+                "panel; no thinning",
             )
             self.assertEqual(
                 len(manifest["tracked_particle_ids_plotted"]["xy"]),
@@ -201,7 +247,10 @@ class PublicationFig9Tests(unittest.TestCase):
             np.save(tracked_npy, ids[:2], allow_pickle=False)
             output.mkdir()
 
-            with self.assertRaisesRegex(FileExistsError, "Refusing to overwrite"):
+            with self.assertRaisesRegex(
+                FileExistsError,
+                "Refusing to overwrite",
+            ):
                 write_publication_fig9_snapshot(
                     particle_h5=particle_h5,
                     field_h5=field_h5,
@@ -219,11 +268,20 @@ class PublicationFig9Tests(unittest.TestCase):
             tracked_npy = root / "ids.npy"
             output = root / "output"
 
-            ids = write_particle_file(particle_h5, time_s=2.0e-13)
-            write_field_file(field_h5, time_s=2.1e-13)
+            ids = write_particle_file(
+                particle_h5,
+                time_s=2.0e-13,
+            )
+            write_field_file(
+                field_h5,
+                time_s=2.1e-13,
+            )
             np.save(tracked_npy, ids[:3], allow_pickle=False)
 
-            with self.assertRaisesRegex(ValueError, "times do not match"):
+            with self.assertRaisesRegex(
+                ValueError,
+                "times do not match",
+            ):
                 write_publication_fig9_snapshot(
                     particle_h5=particle_h5,
                     field_h5=field_h5,
