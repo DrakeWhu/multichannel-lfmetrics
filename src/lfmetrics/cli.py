@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 from typing import Sequence
+
+import numpy as np
 
 from .beam_metrics import compute_beam_metrics
 from .csv_io import write_particle_summary_csv
 from .openpmd_h5 import read_particles_from_case, read_particles_from_h5
 from .plots import write_particle_plots
 from .soft100 import compute_soft100_metrics
+from .tracking import (
+    backtrack_particle_ids,
+    select_final_bunch,
+    write_final_bunch_selection,
+    write_tracking_outputs,
+)
 
 
 class LFMetricsCLIError(RuntimeError):
@@ -43,77 +52,46 @@ def build_parser() -> argparse.ArgumentParser:
         "analyze-case",
         help="Analyze a WarpX case directory containing a 3D/openPMD HDF5 diagnostic.",
     )
-    analyze_case.add_argument(
-        "case_dir",
-        type=Path,
-        help="Case directory, for example combination_1 or a campaign-workflow case dir.",
-    )
-    analyze_case.add_argument(
-        "--diagnostics-dir",
-        default="3D",
-        help="Diagnostics subdirectory relative to case_dir. Default: 3D.",
-    )
-    analyze_case.add_argument(
-        "--species",
-        default=None,
-        help=(
-            "Comma-separated species to analyze. "
-            "If omitted, LFMetrics analyzes electrons."
-        ),
-    )
-    analyze_case.add_argument(
-        "--energy-threshold-MeV",
-        type=float,
-        default=5.0,
-        help="Energy threshold for selected/hot particles. Default: 5.0 MeV.",
-    )
-    analyze_case.add_argument(
-        "--output",
-        type=Path,
-        default=None,
-        help="Output CSV path. Default: CASE_DIR/post/particle_summary.csv.",
-    )
-    analyze_case.add_argument(
-        "--plots-dir",
-        type=Path,
-        default=None,
-        help=(
-            "Case-local directory for fixed PNG diagnostics. "
-            "Default: CASE_DIR/post/plots. Each species uses one child directory."
-        ),
-    )
+    analyze_case.add_argument("case_dir", type=Path)
+    analyze_case.add_argument("--diagnostics-dir", default="3D")
+    analyze_case.add_argument("--species", default=None)
+    analyze_case.add_argument("--energy-threshold-MeV", type=float, default=5.0)
+    analyze_case.add_argument("--output", type=Path, default=None)
+    analyze_case.add_argument("--plots-dir", type=Path, default=None)
+    analyze_case.add_argument("--spectrum-min-energy-MeV", type=float, default=None)
 
     analyze_file = subparsers.add_parser(
         "analyze-h5",
         help="Analyze one openPMD HDF5 file directly.",
     )
     analyze_file.add_argument("h5_file", type=Path)
-    analyze_file.add_argument(
-        "--species",
-        default=None,
-        help="Comma-separated species to analyze. Current default: electrons.",
+    analyze_file.add_argument("--species", default=None)
+    analyze_file.add_argument("--energy-threshold-MeV", type=float, default=5.0)
+    analyze_file.add_argument("--output", type=Path, required=True)
+
+    select_bunch = subparsers.add_parser(
+        "select-final-bunch",
+        help="Select a final-frame bunch and persist its WarpX particle IDs.",
     )
-    analyze_file.add_argument(
-        "--energy-threshold-MeV",
-        type=float,
-        default=5.0,
-        help="Energy threshold for selected/hot particles. Default: 5.0 MeV.",
+    select_bunch.add_argument("h5_file", type=Path)
+    select_bunch.add_argument("--species", default="electrons")
+    select_bunch.add_argument("--energy-threshold-MeV", type=float, default=20.0)
+    select_bunch.add_argument(
+        "--include-backward",
+        action="store_true",
+        help="Do not require pz > 0 when selecting the final bunch.",
     )
-    analyze_case.add_argument(
-        "--spectrum-min-energy-MeV",
-        type=float,
-        default=None,
-        help=(
-            "Lower kinetic-energy cutoff shown in energy_spectrum.png. "
-            "Default: same as --energy-threshold-MeV."
-        ),
+    select_bunch.add_argument("--output-dir", type=Path, required=True)
+
+    backtrack = subparsers.add_parser(
+        "backtrack-bunch",
+        help="Backtrack a fixed NPY list of persistent particle IDs through all frames.",
     )
-    analyze_file.add_argument(
-        "--output",
-        type=Path,
-        required=True,
-        help="Output CSV path.",
-    )
+    backtrack.add_argument("case_dir", type=Path)
+    backtrack.add_argument("--ids", type=Path, required=True)
+    backtrack.add_argument("--species", default="electrons")
+    backtrack.add_argument("--diagnostics-dir", default="3D")
+    backtrack.add_argument("--output-dir", type=Path, required=True)
 
     return parser
 
@@ -123,14 +101,9 @@ def analyze_case(args: argparse.Namespace) -> Path:
     if not case_dir.is_dir():
         raise LFMetricsCLIError(f"Case directory does not exist: {case_dir}")
 
-    output = args.output
-    if output is None:
-        output = case_dir / "post" / "particle_summary.csv"
-
-    plots_root = args.plots_dir
-    if plots_root is None:
-        plots_root = case_dir / "post" / "plots"
-    elif not plots_root.is_absolute():
+    output = args.output or case_dir / "post" / "particle_summary.csv"
+    plots_root = args.plots_dir or case_dir / "post" / "plots"
+    if not plots_root.is_absolute():
         plots_root = case_dir / plots_root
 
     rows: list[dict[str, object]] = []
@@ -177,6 +150,41 @@ def analyze_h5(args: argparse.Namespace) -> Path:
     return write_particle_summary_csv(rows, args.output)
 
 
+def select_final_bunch_command(args: argparse.Namespace) -> Path:
+    h5_file = args.h5_file.resolve(strict=False)
+    if not h5_file.is_file():
+        raise LFMetricsCLIError(f"HDF5 file does not exist: {h5_file}")
+
+    selection = select_final_bunch(
+        h5_file,
+        species=args.species,
+        energy_threshold_MeV=args.energy_threshold_MeV,
+        forward_only=not args.include_backward,
+    )
+    summary = write_final_bunch_selection(selection, args.output_dir)
+    print(json.dumps(summary, indent=2))
+    return args.output_dir
+
+
+def backtrack_bunch_command(args: argparse.Namespace) -> Path:
+    case_dir = args.case_dir.resolve(strict=False)
+    if not case_dir.is_dir():
+        raise LFMetricsCLIError(f"Case directory does not exist: {case_dir}")
+    if not args.ids.is_file():
+        raise LFMetricsCLIError(f"Particle ID file does not exist: {args.ids}")
+
+    target_ids = np.load(args.ids, allow_pickle=False)
+    result = backtrack_particle_ids(
+        case_dir,
+        target_ids,
+        species=args.species,
+        diagnostics_dir=args.diagnostics_dir,
+    )
+    summary = write_tracking_outputs(result, args.output_dir)
+    print(json.dumps(summary, indent=2))
+    return args.output_dir
+
+
 def _main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -185,6 +193,10 @@ def _main(argv: Sequence[str] | None = None) -> int:
         output = analyze_case(args)
     elif args.command == "analyze-h5":
         output = analyze_h5(args)
+    elif args.command == "select-final-bunch":
+        output = select_final_bunch_command(args)
+    elif args.command == "backtrack-bunch":
+        output = backtrack_bunch_command(args)
     else:
         raise LFMetricsCLIError(f"Unknown command: {args.command}")
 
