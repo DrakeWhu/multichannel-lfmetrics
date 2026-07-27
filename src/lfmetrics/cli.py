@@ -12,6 +12,7 @@ from .beam_metrics import compute_beam_metrics
 from .csv_io import write_particle_summary_csv
 from .openpmd_h5 import read_particles_from_case, read_particles_from_h5
 from .plots import write_particle_plots
+from .publication_case import audit_publication_case, write_publication_case_audit
 from .soft100 import compute_soft100_metrics
 from .tracking import (
     backtrack_particle_ids,
@@ -142,6 +143,21 @@ def build_parser() -> argparse.ArgumentParser:
         help="Comma-separated kinetic-energy thresholds. Default: 1,5,10,20.",
     )
 
+    publication_audit = subparsers.add_parser(
+        "audit-publication-case",
+        help="Audit openPMD series and publication context files without reading field arrays.",
+    )
+    publication_audit.add_argument("case_dir", type=Path)
+    publication_audit.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help=(
+            "Output JSON path. Relative paths are resolved inside case_dir. "
+            "Existing files are never overwritten."
+        ),
+    )
+
     return parser
 
 
@@ -267,6 +283,19 @@ def analyze_trajectory_physics_command(args: argparse.Namespace) -> Path:
     return args.output_dir
 
 
+def audit_publication_case_command(args: argparse.Namespace) -> Path:
+    case_dir = args.case_dir.resolve(strict=False)
+    if not case_dir.is_dir():
+        raise LFMetricsCLIError(f"Case directory does not exist: {case_dir}")
+
+    output = args.output
+    if not output.is_absolute():
+        output = case_dir / output
+
+    audit = audit_publication_case(case_dir)
+    return write_publication_case_audit(audit, output)
+
+
 def _main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -283,6 +312,8 @@ def _main(argv: Sequence[str] | None = None) -> int:
         output = analyze_trajectories_command(args)
     elif args.command == "analyze-trajectory-physics":
         output = analyze_trajectory_physics_command(args)
+    elif args.command == "audit-publication-case":
+        output = audit_publication_case_command(args)
     else:
         raise LFMetricsCLIError(f"Unknown command: {args.command}")
 
