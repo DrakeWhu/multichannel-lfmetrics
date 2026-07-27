@@ -23,6 +23,10 @@ from .trajectory_analysis import (
     DEFAULT_ENERGY_THRESHOLDS_MEV,
     analyze_trajectory_file,
 )
+from .trajectory_physics import (
+    TrajectoryPhysicsContext,
+    analyze_trajectory_physics_file,
+)
 
 
 class LFMetricsCLIError(RuntimeError):
@@ -113,6 +117,25 @@ def build_parser() -> argparse.ArgumentParser:
     trajectory.add_argument("trajectory_npz", type=Path)
     trajectory.add_argument("--output-dir", type=Path, required=True)
     trajectory.add_argument(
+        "--energy-thresholds-MeV",
+        type=parse_float_list,
+        default=DEFAULT_ENERGY_THRESHOLDS_MEV,
+        help="Comma-separated kinetic-energy thresholds. Default: 1,5,10,20.",
+    )
+
+    physics = subparsers.add_parser(
+        "analyze-trajectory-physics",
+        help=(
+            "Analyze tracked trajectories in plasma-relative and moving-window "
+            "coordinates."
+        ),
+    )
+    physics.add_argument("trajectory_npz", type=Path)
+    physics.add_argument("--output-dir", type=Path, required=True)
+    physics.add_argument("--plasma-start-um", type=float, required=True)
+    physics.add_argument("--window-front-z0-um", type=float, required=True)
+    physics.add_argument("--moving-window-velocity-m-s", type=float, required=True)
+    physics.add_argument(
         "--energy-thresholds-MeV",
         type=parse_float_list,
         default=DEFAULT_ENERGY_THRESHOLDS_MEV,
@@ -224,6 +247,26 @@ def analyze_trajectories_command(args: argparse.Namespace) -> Path:
     return args.output_dir
 
 
+def analyze_trajectory_physics_command(args: argparse.Namespace) -> Path:
+    trajectory_npz = args.trajectory_npz.resolve(strict=False)
+    if not trajectory_npz.is_file():
+        raise LFMetricsCLIError(f"Trajectory NPZ does not exist: {trajectory_npz}")
+
+    context = TrajectoryPhysicsContext(
+        plasma_start_m=float(args.plasma_start_um) * 1.0e-6,
+        window_front_z0_m=float(args.window_front_z0_um) * 1.0e-6,
+        moving_window_velocity_m_s=float(args.moving_window_velocity_m_s),
+    )
+    summary = analyze_trajectory_physics_file(
+        trajectory_npz,
+        args.output_dir,
+        context,
+        energy_thresholds_MeV=args.energy_thresholds_MeV,
+    )
+    print(json.dumps(summary, indent=2))
+    return args.output_dir
+
+
 def _main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -238,6 +281,8 @@ def _main(argv: Sequence[str] | None = None) -> int:
         output = backtrack_bunch_command(args)
     elif args.command == "analyze-trajectories":
         output = analyze_trajectories_command(args)
+    elif args.command == "analyze-trajectory-physics":
+        output = analyze_trajectory_physics_command(args)
     else:
         raise LFMetricsCLIError(f"Unknown command: {args.command}")
 
