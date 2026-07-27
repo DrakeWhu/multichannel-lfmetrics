@@ -6,6 +6,7 @@ from lfmetrics.beam_metrics import compute_beam_metrics
 from lfmetrics.constants import C_LIGHT, M_E_KG
 from lfmetrics.contracts import PARTICLE_SUMMARY_COLUMNS, validate_particle_summary_row
 from lfmetrics.particles import ParticleData
+from lfmetrics.soft100 import compute_soft100_metrics
 
 
 class ContractTests(unittest.TestCase):
@@ -21,6 +22,13 @@ class ContractTests(unittest.TestCase):
             "beam_quality_score",
             "beam_quality_status",
             "beam_quality_flags",
+            "charge_soft100_pC",
+            "n_effective_soft100",
+            "energy_p95_soft100_MeV",
+            "energy_relative_spread_rms_soft100",
+            "theta_r_p95_soft100_mrad",
+            "emitn_xy_soft100_um_rad",
+            "halo_fraction_soft100",
         ]:
             self.assertIn(name, PARTICLE_SUMMARY_COLUMNS)
 
@@ -38,7 +46,9 @@ class ContractTests(unittest.TestCase):
             weighting=np.array([10.0, 20.0]),
         )
 
-        row = compute_beam_metrics(particles, energy_threshold_MeV=0.0).as_row()
+        beam_metrics = compute_beam_metrics(particles, energy_threshold_MeV=0.0)
+        soft100_metrics = compute_soft100_metrics(particles)
+        row = {**beam_metrics.as_row(), **soft100_metrics.as_row()}
         validate_particle_summary_row(row)
 
 
