@@ -44,10 +44,11 @@ def _read_wavelength_averaged_xy_b_plane(
 ):
     """Read B(x/y) xy planes around coordinate_m and average the arrays.
 
-    This intentionally returns a normal MeshPlaneData-like object, with only
-    values/source-coordinate bookkeeping replaced.  The downstream Fig. 9
-    renderer therefore keeps its original layout, particles, E_z backgrounds,
-    colorbars and quiver style.  Only the magnetic vector data are changed.
+    This intentionally returns a normal MeshPlaneData-like object, with the
+    central plane metadata preserved for the existing colocation checks.  The
+    downstream Fig. 9 renderer therefore keeps its original layout, particles,
+    E_z backgrounds, colorbars and quiver style.  Only the magnetic vector
+    data are changed.
     """
 
     offsets = np.linspace(-0.5 * lambda_average_m, 0.5 * lambda_average_m, lambda_samples)
@@ -74,15 +75,7 @@ def _read_wavelength_averaged_xy_b_plane(
             if not np.allclose(ref_coord, coord, rtol=1.0e-12, atol=1.0e-18):
                 raise ValueError("Wavelength-averaged B planes have inconsistent grids")
 
-    return replace(
-        reference,
-        requested_coordinate_m=float(coordinate_m),
-        actual_coordinate_m=float(coordinate_m),
-        values_si=values,
-        source_indices=tuple(),
-        source_coordinates_m=tuple(float(coordinate_m + offset) for offset in offsets),
-        source_weights=tuple(float(1.0 / lambda_samples) for _ in range(lambda_samples)),
-    )
+    return replace(reference, values_si=values)
 
 
 def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
