@@ -26,13 +26,30 @@ def _validated_positive_finite(name: str, value: float) -> float:
     return result
 
 
+def _validated_nonnegative_finite(name: str, value: float) -> float:
+    result = float(value)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError(f"{name} must be finite and non-negative")
+    return result
+
+
+def _validated_positive_int(name: str, value: int) -> int:
+    result = int(value)
+    if result <= 0:
+        raise ValueError(f"{name} must be a positive integer")
+    return result
+
+
 def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
     """Write the v3 snapshot with fixed-scale multiresolution magnetic arrows.
 
-    The exterior keeps the established coarse quiver. Inside the central box,
-    the coarse arrows are removed and replaced by one arrow at every native
-    transverse field cell. Both layers share the same fixed physical
-    normalization so all publication frames remain directly comparable.
+    This wrapper preserves the established v3 composite layout: E_z remains the
+    scalar background in all panels, background/tracked particle layers are
+    unchanged, and only the magnetic quiver representation is overridden.  By
+    default the quiver uses the raw transverse B plane.  Passing
+    ``magnetic_quiver_lambda_average_m`` replaces the quiver vectors with a
+    spatial wavelength average of B/x and B/y around the same transverse plane,
+    without changing any scalar background or particle plotting.
     """
 
     magnetic_color_limit_kT = _validated_positive_finite(
@@ -47,6 +64,14 @@ def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
         "quiver_central_half_width_m",
         kwargs.pop("quiver_central_half_width_m", 2.5e-6),
     )
+    magnetic_quiver_lambda_average_m = _validated_nonnegative_finite(
+        "magnetic_quiver_lambda_average_m",
+        kwargs.pop("magnetic_quiver_lambda_average_m", 0.0),
+    )
+    magnetic_quiver_lambda_samples = _validated_positive_int(
+        "magnetic_quiver_lambda_samples",
+        kwargs.pop("magnetic_quiver_lambda_samples", 21),
+    )
     if magnetic_visible_floor_kT >= magnetic_color_limit_kT:
         raise ValueError(
             "magnetic_visible_floor_kT must be smaller than magnetic_color_limit_kT"
@@ -56,6 +81,7 @@ def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
     magnetic_limit_t = magnetic_color_limit_kT * 1.0e3
     central_half_width_um = quiver_central_half_width_m * 1.0e6
     magnetic_gamma = float(kwargs.get("magnetic_length_gamma", 1.8))
+    use_lambda_quiver = magnetic_quiver_lambda_average_m > 0.0
 
     original_range = _v3._positive_percentile_range
     original_reader = _v3.read_mesh_plane
@@ -67,6 +93,7 @@ def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
         "candidate_native_points": 0,
         "visible_native_arrows": 0,
     }
+    lambda_average_components: set[str] = set()
 
     def fixed_range(
         values: np.ndarray,
@@ -75,6 +102,46 @@ def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
     ) -> tuple[float, float]:
         del values, lower_percentile, upper_percentile
         return float(magnetic_floor_t), float(magnetic_limit_t)
+
+    def lambda_averaged_plane(plane, args, reader_kwargs):
+        center_coordinate = float(plane.requested_coordinate_m)
+        sample_coordinates = np.linspace(
+            center_coordinate - 0.5 * magnetic_quiver_lambda_average_m,
+            center_coordinate + 0.5 * magnetic_quiver_lambda_average_m,
+            magnetic_quiver_lambda_samples,
+        )
+        sample_values = []
+        for coordinate in sample_coordinates:
+            sample_kwargs = dict(reader_kwargs)
+            sample_kwargs["coordinate_m"] = float(coordinate)
+            sample = original_reader(*args, **sample_kwargs)
+            if sample.axis_labels != plane.axis_labels:
+                raise ValueError("Lambda-averaged B samples have inconsistent axes")
+            for axis in plane.axis_labels:
+                if not np.allclose(
+                    sample.coordinate(axis),
+                    plane.coordinate(axis),
+                    rtol=1.0e-12,
+                    atol=1.0e-18,
+                ):
+                    raise ValueError(
+                        "Lambda-averaged B samples have inconsistent transverse grids"
+                    )
+            sample_values.append(np.asarray(sample.values_si, dtype=float))
+
+        averaged_values = np.mean(np.stack(sample_values, axis=0), axis=0)
+        return replace(
+            plane,
+            values_si=averaged_values,
+            requested_coordinate_m=center_coordinate,
+            actual_coordinate_m=center_coordinate,
+            source_indices=(),
+            source_coordinates_m=tuple(float(v) for v in sample_coordinates),
+            source_weights=tuple(
+                1.0 / magnetic_quiver_lambda_samples
+                for _ in range(magnetic_quiver_lambda_samples)
+            ),
+        )
 
     def capturing_reader(*args, **reader_kwargs):
         plane = original_reader(*args, **reader_kwargs)
@@ -86,6 +153,9 @@ def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
             component_name = str(reader_kwargs.get("component_name", ""))
         plane_name = str(reader_kwargs.get("plane", ""))
         if record_name == "B" and component_name in {"x", "y"} and plane_name == "xy":
+            if use_lambda_quiver:
+                plane = lambda_averaged_plane(plane, args, reader_kwargs)
+                lambda_average_components.add(component_name)
             captured_planes[component_name] = plane
         return plane
 
@@ -195,13 +265,24 @@ def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
             Axes.quiver = original_quiver
             Figure.savefig = original_savefig
 
+    if use_lambda_quiver:
+        overlay = "<B/x>_lambda,<B/y>_lambda quiver"
+        representation_prefix = (
+            f"lambda-averaged over {magnetic_quiver_lambda_average_m:.6e} m "
+            f"with {magnetic_quiver_lambda_samples} z samples; "
+        )
+    else:
+        overlay = "B/x,B/y quiver"
+        representation_prefix = ""
+
     compatible = replace(
         result,
-        xy_vector_overlay="B/x,B/y quiver",
+        xy_vector_overlay=overlay,
         magnetic_color_min_kT=magnetic_visible_floor_kT,
         magnetic_color_max_kT=magnetic_color_limit_kT,
         quiver_representation=(
-            "fixed 5-125 kT inferno normalization; coarse exterior arrows and "
+            representation_prefix
+            + "fixed inferno normalization; coarse exterior arrows and "
             "every native field cell inside the central transverse box"
         ),
     )
@@ -209,12 +290,17 @@ def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
     manifest_path = Path(result.manifest_json)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     manifest["result"] = asdict(compatible)
-    manifest["xy_vector_overlay"] = "B/x,B/y quiver"
+    manifest["xy_vector_overlay"] = overlay
     manifest["magnetic_color_limit_kT"] = magnetic_color_limit_kT
     manifest["magnetic_visible_floor_kT"] = magnetic_visible_floor_kT
     manifest["magnetic_color_scale_mode"] = "fixed floor and ceiling across frames"
     manifest["magnetic_quiver_grid_mode"] = "coarse exterior plus native central grid"
     manifest["quiver_central_half_width_m"] = quiver_central_half_width_m
+    manifest["magnetic_quiver_lambda_average_m"] = magnetic_quiver_lambda_average_m
+    manifest["magnetic_quiver_lambda_samples"] = magnetic_quiver_lambda_samples
+    manifest["magnetic_quiver_lambda_average_components"] = sorted(
+        lambda_average_components
+    )
     manifest["central_quiver_candidate_native_points"] = central_stats[
         "candidate_native_points"
     ]
