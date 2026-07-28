@@ -88,18 +88,6 @@ def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
     spatial wavelength average of ``B_x`` and ``B_y`` before quiver rendering.
     """
 
-    magnetic_color_limit_kT = _validated_positive_finite(
-        "magnetic_color_limit_kT",
-        kwargs.pop("magnetic_color_limit_kT", 125.0),
-    )
-    magnetic_visible_floor_kT = _validated_positive_finite(
-        "magnetic_visible_floor_kT",
-        kwargs.pop("magnetic_visible_floor_kT", 5.0),
-    )
-    quiver_central_half_width_m = _validated_positive_finite(
-        "quiver_central_half_width_m",
-        kwargs.pop("quiver_central_half_width_m", 2.5e-6),
-    )
     magnetic_lambda_average_m = kwargs.pop("magnetic_lambda_average_m", None)
     if magnetic_lambda_average_m is not None:
         magnetic_lambda_average_m = _validated_positive_finite(
@@ -109,6 +97,19 @@ def write_publication_fig9_snapshot(**kwargs) -> PublicationFig9SnapshotResult:
     magnetic_lambda_samples = _validated_odd_integer(
         "magnetic_lambda_samples",
         kwargs.pop("magnetic_lambda_samples", 21),
+    )
+    magnetic_color_limit_default_kT = 15.0 if magnetic_lambda_average_m is not None else 125.0
+    magnetic_color_limit_kT = _validated_positive_finite(
+        "magnetic_color_limit_kT",
+        kwargs.pop("magnetic_color_limit_kT", magnetic_color_limit_default_kT),
+    )
+    magnetic_visible_floor_kT = _validated_positive_finite(
+        "magnetic_visible_floor_kT",
+        kwargs.pop("magnetic_visible_floor_kT", 5.0),
+    )
+    quiver_central_half_width_m = _validated_positive_finite(
+        "quiver_central_half_width_m",
+        kwargs.pop("quiver_central_half_width_m", 2.5e-6),
     )
     if magnetic_visible_floor_kT >= magnetic_color_limit_kT:
         raise ValueError(
