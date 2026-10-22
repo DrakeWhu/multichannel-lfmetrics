@@ -104,11 +104,23 @@ def choose_species(
     raise KeyError("No particle species available")
 
 
+def _unit_si(component: h5py.Dataset | h5py.Group) -> float:
+    raw_value = np.asarray(component.attrs.get("unitSI", 1.0), dtype=float)
+    if raw_value.size != 1:
+        raise ValueError(f"unitSI must be scalar, got shape {raw_value.shape}")
+
+    value = float(raw_value.reshape(-1)[0])
+    if not np.isfinite(value):
+        raise ValueError("unitSI must be finite")
+    return value
+
+
 def _read_component(
     group: h5py.Group, record_name: str, component_name: str
 ) -> np.ndarray:
     record = group[record_name]
-    return np.asarray(record[component_name])
+    component = record[component_name]
+    return np.asarray(component, dtype=float) * _unit_si(component)
 
 
 def _read_optional_position_offset(
@@ -143,7 +155,7 @@ def _read_optional_position_offset(
                 "constant positionOffset component "
                 f"'{component_name}' has non-scalar value shape {value.shape}"
             )
-        return float(value.reshape(-1)[0])
+        return float(value.reshape(-1)[0]) * _unit_si(component)
 
     values = np.asarray(component, dtype=float)
     if values.ndim != 1 or values.shape[0] != length:
@@ -151,7 +163,7 @@ def _read_optional_position_offset(
             f"positionOffset '{component_name}' shape {values.shape} "
             f"does not match particle length {length}"
         )
-    return values
+    return values * _unit_si(component)
 
 
 def _read_weighting(group: h5py.Group, length: int) -> np.ndarray | None:
@@ -166,11 +178,13 @@ def _read_weighting(group: h5py.Group, length: int) -> np.ndarray | None:
     weighting = group["weighting"]
 
     if isinstance(weighting, h5py.Dataset):
-        values = np.asarray(weighting, dtype=float)
+        component = weighting
     elif isinstance(weighting, h5py.Group) and "SCALAR" in weighting:
-        values = np.asarray(weighting["SCALAR"], dtype=float)
+        component = weighting["SCALAR"]
     else:
         return None
+
+    values = np.asarray(component, dtype=float) * _unit_si(component)
 
     if values.shape[0] != length:
         raise ValueError(
